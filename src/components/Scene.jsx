@@ -3,8 +3,13 @@ import { Sky, ContactShadows, Environment } from '@react-three/drei'
 import CameraController from './CameraController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
+import River from './environment/River'
+import Understory from './environment/Understory'
 import Butterfly from './entities/Butterfly'
 import Jaguar from './entities/Jaguar'
+import PinkDolphin from './entities/PinkDolphin'
+import Sloth from './entities/Sloth'
+import Macaw from './entities/Macaw'
 import Rain from './environment/Rain'
 import Fireflies from './environment/Fireflies'
 
@@ -16,7 +21,7 @@ const Scene = () => {
       style={{ background: '#051605' }} // Deep forest dark green
     >
       {/* Fog for depth and atmosphere */}
-      <fog attach="fog" args={['#051605', 8, 35]} />
+      <fog attach="fog" args={['#051605', 5, 45]} />
 
       <ambientLight intensity={0.25} />
       <directionalLight
@@ -30,12 +35,18 @@ const Scene = () => {
       <CameraController />
 
       <ForestFloor />
+      <River />
+      <Understory />
       <Canopy />
+
       <Rain count={1500} />
       <Fireflies count={100} />
 
-      {/* Moved Jaguar slightly closer to camera focus but still grounded */}
+      {/* Fauna */}
       <Jaguar position={[1, 0, -4]} />
+      <PinkDolphin position={[0, -2, 0]} />
+      <Sloth position={[5, 12, 5]} />
+      <Macaw position={[-5, 20, -5]} />
 
       <Butterfly position={[-1.5, 2, -4]} />
       <Butterfly position={[2, 3, -6]} />
@@ -48,7 +59,7 @@ const Scene = () => {
         opacity={0.6}
         scale={40}
         blur={2}
-        far={2.0}
+        far={4.0}
         resolution={512}
         color="#000000"
       />

@@ -10,45 +10,16 @@ const FernGeometry = () => {
     const numLeaves = 5
     const vertices = []
     const normals = []
-    const indices = []
-    const uvs = []
-
-    // Helper to add a leaf
-    // A leaf is a simple triangle or quad. Let's do a triangle for simplicity and organic look (tapered).
-    // Width: 0.5, Height: 2.0
+    // const indices = [] // Unused
+    // const uvs = [] // Unused
 
     for (let i = 0; i < numLeaves; i++) {
       const angle = (i / numLeaves) * Math.PI * 2
-      const cos = Math.cos(angle)
-      const sin = Math.sin(angle)
 
-      // Base center
-      const x0 = 0, y0 = 0, z0 = 0
-
-      // Base left/right (small width at base)
-      const wBase = 0.05
-      const x1 = cos * wBase, z1 = sin * wBase, y1 = 0
-      const x2 = -cos * wBase, z2 = -sin * wBase, y2 = 0 // Wait, this just mirrors.
-
-      // Tip (curved outward)
-      // Lean out by distance L
-      const lean = 1.0
       const height = 1.5 + Math.random() * 0.5
-      const xTip = cos * lean, zTip = sin * lean, yTip = height
 
       // Let's make a triangle: BaseLeft, BaseRight, Tip.
-      // Actually, a quad is better for a leaf blade.
-      // Base(-w), Base(+w), Tip(0)
-
-      // To keep it simple, let's just use 3 vertices per leaf (Triangle)
-      // But we need double side rendering.
-
-      // Vertex 0: Base Left
-      // Vertex 1: Base Right
-      // Vertex 2: Tip
-
       // We need to rotate these points around Y by `angle`.
-      // Let's define in local leaf space then rotate.
       // Local:
       // P0: (-0.1, 0, 0)
       // P1: (0.1, 0, 0)
@@ -64,7 +35,7 @@ const FernGeometry = () => {
       p2.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle)
 
       // Add to vertices
-      const baseIndex = vertices.length / 3
+      // const baseIndex = vertices.length / 3 // Unused since we don't index
 
       vertices.push(p0.x, p0.y, p0.z)
       vertices.push(p1.x, p1.y, p1.z)
@@ -81,11 +52,6 @@ const FernGeometry = () => {
       vertices.push(p2.x, p2.y, p2.z)
       vertices.push(p1.x, p1.y, p1.z) // Back face
 
-      // Front face
-      indices.push(baseIndex, baseIndex + 1, baseIndex + 2)
-      // Back face
-      indices.push(baseIndex + 3, baseIndex + 4, baseIndex + 5)
-
       // Normals
       normals.push(n.x, n.y, n.z)
       normals.push(n.x, n.y, n.z)
@@ -99,12 +65,6 @@ const FernGeometry = () => {
 
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
-    // geometry.setIndex(indices) // Actually I just pushed vertices for triangles, no need for index if unindexed draw?
-    // Wait, indices.push implies indexed geometry.
-    // If I use setIndex, vertices should be unique. But I duplicated them for back face to have correct normals.
-    // Actually, I pushed 6 vertices per leaf.
-    // So I can just not use indices and use drawArrays (triangles).
-    // Or use indices [0, 1, 2, 3, 4, 5...]
 
     return geometry
   }, [])
