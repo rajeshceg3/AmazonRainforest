@@ -24,6 +24,9 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'react-hooks/exhaustive-deps': 'warn',
+      // Disable strict purity check for procedural generation (Math.random in useMemo)
+      'react-hooks/purity': 'off',
     },
   },
 ])
