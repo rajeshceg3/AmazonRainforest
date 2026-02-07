@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { Sky, ContactShadows, Environment } from '@react-three/drei'
+import { ContactShadows, Environment } from '@react-three/drei'
 import CameraController from './CameraController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
@@ -15,15 +15,16 @@ const Scene = () => {
       camera={{ position: [0, 2, 10], fov: 45 }}
       style={{ background: '#051605' }} // Deep forest dark green
     >
-      {/* Fog for depth and atmosphere */}
-      <fog attach="fog" args={['#051605', 8, 35]} />
+      {/* Fog for depth and atmosphere - slightly increased range */}
+      <fog attach="fog" args={['#051605', 5, 45]} />
 
-      <ambientLight intensity={0.25} />
+      <ambientLight intensity={0.2} color="#cce0cc" />
       <directionalLight
-        position={[5, 20, 5]}
-        intensity={0.8}
+        position={[10, 20, 5]}
+        intensity={1.2}
+        color="#fff0dd" // Warm sunlight
         castShadow
-        shadow-mapSize={[2048, 2048]} // Higher res shadows
+        shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0001}
       />
 

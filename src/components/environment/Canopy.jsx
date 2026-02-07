@@ -1,93 +1,90 @@
-import { useRef, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useMemo } from 'react'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 
+const TreeConfig = {
+  count: 50,
+  area: 80,
+  minHeight: 10,
+  maxHeight: 20,
+}
+
 const Canopy = () => {
-  const lightRef = useRef()
+  const { trees, leaves } = useMemo(() => {
+    const trees = []
+    const leaves = []
 
-  // Settings
-  const treeCount = 10
-  const leavesPerTree = 150
+    for (let i = 0; i < TreeConfig.count; i++) {
+      const x = (Math.random() - 0.5) * TreeConfig.area
+      const z = (Math.random() - 0.5) * TreeConfig.area
 
-  // Generate tree centers
-  const treeCenters = useMemo(() => {
-    const centers = []
-    for (let i = 0; i < treeCount; i++) {
-      centers.push(new THREE.Vector3(
-        (Math.random() - 0.5) * 50,
-        15 + Math.random() * 5,
-        (Math.random() - 0.5) * 50
-      ))
+      // Avoid center clearing if desired, but let's keep it random for now.
+
+      const height = TreeConfig.minHeight + Math.random() * (TreeConfig.maxHeight - TreeConfig.minHeight)
+      const scaleBase = 0.8 + Math.random() * 0.6
+      const rotation = Math.random() * Math.PI * 2
+
+      // Trunk
+      trees.push({
+        position: [x, height / 2, z],
+        scale: [scaleBase, height, scaleBase],
+        rotation: [0, rotation, 0]
+      })
+
+      // Generate leaves for this tree
+      // Use a few clusters for a more tree-like shape
+      const clusterCount = 3 + Math.floor(Math.random() * 3)
+
+      for (let c = 0; c < clusterCount; c++) {
+          const clusterY = height - (Math.random() * (height * 0.4)) // Top 40% of tree
+          // Random offset from trunk
+          const branchAngle = Math.random() * Math.PI * 2
+          const branchDist = Math.random() * 3 * scaleBase
+
+          const clusterX = x + Math.cos(branchAngle) * branchDist
+          const clusterZ = z + Math.sin(branchAngle) * branchDist
+
+          const leavesInCluster = 15 + Math.floor(Math.random() * 10)
+
+          for (let j = 0; j < leavesInCluster; j++) {
+            const r = Math.random() * 2.5
+            const theta = Math.random() * Math.PI * 2
+            const phi = Math.random() * Math.PI
+
+            const lx = clusterX + r * Math.sin(phi) * Math.cos(theta)
+            const ly = clusterY + r * Math.sin(phi) * Math.sin(theta)
+            const lz = clusterZ + r * Math.cos(phi)
+
+            leaves.push({
+                position: [lx, ly, lz],
+                rotation: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
+                scale: 0.8 + Math.random() * 0.8
+            })
+          }
+      }
     }
-    return centers
+    return { trees, leaves }
   }, [])
-
-  useFrame((state) => {
-    if (lightRef.current) {
-      // Gentle sun pulse
-      lightRef.current.intensity = 0.8 + Math.sin(state.clock.elapsedTime * 0.3) * 0.3
-      // Subtle movement of light position
-      lightRef.current.position.x = Math.sin(state.clock.elapsedTime * 0.1) * 2
-    }
-  })
 
   return (
     <group>
-      {/* Canopy Leaves using Instances */}
-      <Instances range={treeCount * leavesPerTree}>
-        <planeGeometry args={[1.5, 1.5]} />
-        <meshStandardMaterial
-          color="#1a4d1a"
-          side={THREE.DoubleSide}
-          transparent
-          opacity={0.8}
-          depthWrite={false} // Helps with transparency sorting issues slightly
-        />
-
-        {treeCenters.map((center, i) => (
-          <group key={i} position={center}>
-            {Array.from({ length: leavesPerTree }).map((_, j) => {
-              // Random position within a sphere around center
-              const r = 4 + Math.random() * 3
-              const theta = Math.random() * Math.PI * 2
-              const phi = Math.acos(2 * Math.random() - 1)
-
-              const x = r * Math.sin(phi) * Math.cos(theta)
-              const y = r * Math.sin(phi) * Math.sin(theta) * 0.6 // Flatten slightly
-              const z = r * Math.cos(phi)
-
-              return (
-                <Instance
-                  key={`${i}-${j}`}
-                  position={[x, y, z]}
-                  rotation={[
-                    Math.random() * Math.PI,
-                    Math.random() * Math.PI,
-                    Math.random() * Math.PI
-                  ]}
-                  scale={0.5 + Math.random() * 1.5}
-                />
-              )
-            })}
-          </group>
+      {/* Trunks */}
+      <Instances range={trees.length} castShadow receiveShadow>
+        <cylinderGeometry args={[0.2, 0.5, 1, 7]} />
+        <meshStandardMaterial color="#2d1a10" roughness={0.9} />
+        {trees.map((data, i) => (
+          <Instance key={i} position={data.position} scale={data.scale} rotation={data.rotation} />
         ))}
       </Instances>
 
-      {/* Sun Shafts / Volumetric Light Placeholder */}
-      <spotLight
-        ref={lightRef}
-        position={[10, 25, 5]}
-        angle={0.5}
-        penumbra={1}
-        intensity={1}
-        color="#fffceb"
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-      />
-
-      {/* Ambient fill for canopy from below */}
-      <pointLight position={[0, 10, 0]} intensity={0.2} color="#4a704a" distance={30} decay={2} />
+      {/* Leaves */}
+      <Instances range={leaves.length} castShadow receiveShadow>
+        <planeGeometry args={[1.2, 1.2]} />
+        <meshStandardMaterial color="#1a4d1a" side={THREE.DoubleSide} transparent opacity={0.9} alphaTest={0.5} />
+        {leaves.map((data, i) => (
+          <Instance key={i} position={data.position} rotation={data.rotation} scale={data.scale} />
+        ))}
+      </Instances>
     </group>
   )
 }

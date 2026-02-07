@@ -5,20 +5,20 @@
 - **Rendering Foundation**: Three.js integration with @react-three/fiber and @react-three/drei.
 - **Camera System**: Implemented "slow drift" and "gentle head sway" camera controller.
 - **Environment Layers**:
-    - **Forest Floor**: Deep green ground with instanced cone foliage.
-    - **Canopy**: Elevated canopy spheres with pulsating sun shaft simulation.
+    - **Forest Floor**: Procedural terrain with noise-based height, vertex coloring, and instanced grass/ferns.
+    - **Canopy**: Procedural trees with trunks and clustered leaves.
 - **Atmospheric Effects**:
-    - Fog system for depth and humidity.
+    - Enhanced fog and warm directional lighting for atmosphere.
     - Particle-based rain system.
 - **Fauna**:
-    - Animated Butterflies with fluttering wings.
-    - Jaguar placeholder model with breathing animation.
+    - Animated Butterflies with proper orientation, body geometry, and flapping.
+    - Jaguar model updated to use organic shapes (capsules/spheres) and proper orientation.
 - **UI**: Minimalist poetic text overlay with fade transitions.
 
 ## Completed in this session
-- Initialized project and configured Tailwind v4.
-- Created core components: `Scene`, `CameraController`, `ForestFloor`, `Canopy`, `Butterfly`, `Jaguar`, `Rain`, and `Overlay`.
-- Verified build and project integrity.
+- Refactored `ForestFloor`, `Canopy`, `Jaguar`, and `Butterfly` for higher realism.
+- Improved lighting and atmosphere in `Scene`.
+- Verified changes with Playwright screenshot.
 
 ## Completion Percentage
-75%
+85%
