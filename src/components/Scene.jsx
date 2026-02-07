@@ -3,8 +3,13 @@ import { ContactShadows, Environment } from '@react-three/drei'
 import CameraController from './CameraController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
+import River from './environment/River'
+import Understory from './environment/Understory'
 import Butterfly from './entities/Butterfly'
 import Jaguar from './entities/Jaguar'
+import PinkDolphin from './entities/PinkDolphin'
+import Sloth from './entities/Sloth'
+import Macaw from './entities/Macaw'
 import Rain from './environment/Rain'
 import Fireflies from './environment/Fireflies'
 
@@ -31,12 +36,19 @@ const Scene = () => {
       <CameraController />
 
       <ForestFloor />
+      <River />
+      <Understory />
       <Canopy />
+
       <Rain count={1500} />
       <Fireflies count={100} />
 
+      {/* Fauna */}
       {/* Moved Jaguar slightly closer to camera focus but still grounded */}
       <Jaguar position={[1, 0, -4]} />
+      <PinkDolphin position={[0, -2, 0]} />
+      <Sloth position={[5, 12, 5]} />
+      <Macaw position={[-5, 20, -5]} />
 
       <Butterfly position={[-1.5, 2, -4]} />
       <Butterfly position={[2, 3, -6]} />

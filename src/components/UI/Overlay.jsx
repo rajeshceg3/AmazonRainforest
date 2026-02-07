@@ -28,6 +28,11 @@ const Overlay = () => {
       <div className={`transition-opacity duration-2000 ease-in-out ${visible ? 'opacity-100' : 'opacity-0'}`}>
         {quotes[quoteIndex]}
       </div>
+
+      {/* Interaction Hint */}
+      <div className="absolute bottom-8 text-[10px] opacity-30">
+        Scroll / Drag to Explore Layers
+      </div>
     </div>
   )
 }
