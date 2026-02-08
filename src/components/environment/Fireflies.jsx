@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-const Fireflies = ({ count = 80 }) => {
+const Fireflies = ({ count = 200 }) => {
   const points = useRef()
 
   const material = useMemo(() => {
@@ -59,9 +59,9 @@ const Fireflies = ({ count = 80 }) => {
     const rnd = new Float32Array(count * 3)
 
     for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 40
+      pos[i * 3] = (Math.random() - 0.5) * 400
       pos[i * 3 + 1] = 1 + Math.random() * 8 // Height 1 to 9
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 40
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 400
 
       sc[i] = Math.random()
 
