@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment } from '@react-three/drei'
 import CameraController from './CameraController'
+import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
 import River from './environment/River'
@@ -13,7 +14,7 @@ import Macaw from './entities/Macaw'
 import Rain from './environment/Rain'
 import Fireflies from './environment/Fireflies'
 
-const Scene = () => {
+const Scene = ({ audioStarted }) => {
   return (
     <Canvas
       shadows
@@ -22,6 +23,8 @@ const Scene = () => {
     >
       {/* Fog for depth and atmosphere - slightly increased range */}
       <fog attach="fog" args={['#051605', 5, 45]} />
+
+      <AudioController started={audioStarted} />
 
       <ambientLight intensity={0.2} color="#cce0cc" />
       <directionalLight
