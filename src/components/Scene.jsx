@@ -22,7 +22,7 @@ const Scene = ({ audioStarted }) => {
       style={{ background: '#051605' }} // Deep forest dark green
     >
       {/* Fog for depth and atmosphere - slightly increased range and lighter green for mist */}
-      <fog attach="fog" args={['#081808', 8, 60]} />
+      <fog attach="fog" args={['#081808', 20, 250]} />
 
       <AudioController started={audioStarted} />
 
@@ -31,18 +31,18 @@ const Scene = ({ audioStarted }) => {
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
-        position={[20, 50, 15]}
+        position={[50, 100, 50]}
         intensity={2.0}
         color="#fff5e6" // Warm sunlight
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0005}
       >
-        <orthographicCamera attach="shadow-camera" args={[-50, 50, 50, -50, 0.1, 200]} />
+        <orthographicCamera attach="shadow-camera" args={[-200, 200, 200, -200, 0.1, 500]} />
       </directionalLight>
 
       {/* Floating Particles (Pollen/Spores) */}
-      <Sparkles count={800} scale={[50, 50, 50]} size={3} speed={0.3} opacity={0.4} color="#ccffcc" />
+      <Sparkles count={2000} scale={[400, 50, 400]} size={6} speed={0.3} opacity={0.4} color="#ccffcc" />
 
       <CameraController />
 
@@ -51,8 +51,8 @@ const Scene = ({ audioStarted }) => {
       <Understory />
       <Canopy />
 
-      <Rain count={1500} />
-      <Fireflies count={100} />
+      <Rain count={4000} />
+      <Fireflies count={400} />
 
       {/* Fauna */}
       {/* Moved Jaguar closer and grounded */}

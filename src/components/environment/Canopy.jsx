@@ -7,8 +7,8 @@ import BarkMaterial from '../shaders/BarkMaterial'
 extend({ BarkMaterial })
 
 const TreeConfig = {
-  count: 40,
-  area: 80,
+  count: 150,
+  area: 400,
   minHeight: 12,
   maxHeight: 25,
 }

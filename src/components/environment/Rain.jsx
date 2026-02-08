@@ -2,7 +2,7 @@ import { useRef, useMemo, useLayoutEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-const Rain = ({ count = 2000 }) => {
+const Rain = ({ count = 4000 }) => {
   const mesh = useRef()
 
   const material = useMemo(() => {
@@ -71,9 +71,9 @@ const Rain = ({ count = 2000 }) => {
     const temp = []
     const randoms = new Float32Array(count)
     for (let i = 0; i < count; i++) {
-      const x = (Math.random() - 0.5) * 60
+      const x = (Math.random() - 0.5) * 400
       const y = Math.random() * 25
-      const z = (Math.random() - 0.5) * 60
+      const z = (Math.random() - 0.5) * 400
       temp.push({ x, y, z })
       randoms[i] = Math.random()
     }

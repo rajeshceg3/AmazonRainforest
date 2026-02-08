@@ -77,14 +77,14 @@ const GrassGeometry = () => {
 }
 
 const ForestFloor = () => {
-  const fernCount = 400
-  const grassCount = 4000
+  const fernCount = 1000
+  const grassCount = 10000
 
   const fernGeo = FernGeometry()
   const grassGeo = GrassGeometry()
 
   const groundGeo = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(120, 120, 128, 128)
+    const geo = new THREE.PlaneGeometry(400, 400, 512, 512)
     const pos = geo.attributes.position
     // Keep noise logic for height, remove vertex colors
     for (let i = 0; i < pos.count; i++) {
@@ -119,8 +119,8 @@ const ForestFloor = () => {
         <Instances range={grassCount} geometry={grassGeo}>
             <meshStandardMaterial color="#4a6f1b" side={THREE.DoubleSide} roughness={0.8} />
             {Array.from({ length: grassCount }).map((_, i) => {
-                const x = (Math.random() - 0.5) * 80
-                const z = (Math.random() - 0.5) * 80
+                const x = (Math.random() - 0.5) * 400
+                const z = (Math.random() - 0.5) * 400
                 const h = getHeight(x, z)
                 return (
                     <Instance
@@ -137,8 +137,8 @@ const ForestFloor = () => {
         <Instances range={fernCount} geometry={fernGeo} castShadow receiveShadow>
              <meshStandardMaterial color="#2d5a27" side={THREE.DoubleSide} roughness={0.8} />
              {Array.from({ length: fernCount }).map((_, i) => {
-                 const x = (Math.random() - 0.5) * 80
-                 const z = (Math.random() - 0.5) * 80
+                 const x = (Math.random() - 0.5) * 400
+                 const z = (Math.random() - 0.5) * 400
                  const h = getHeight(x, z)
                  return (
                      <Instance

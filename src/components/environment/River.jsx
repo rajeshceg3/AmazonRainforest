@@ -94,7 +94,7 @@ const River = () => {
   return (
     <group position={[0, -0.5, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[100, 100, 128, 128]} />
+        <planeGeometry args={[400, 400, 512, 512]} />
         <waterMaterial ref={materialRef} transparent side={THREE.DoubleSide} />
       </mesh>
     </group>

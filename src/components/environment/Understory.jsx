@@ -52,14 +52,14 @@ const Vine = ({ position, length, delay }) => {
 }
 
 const Understory = () => {
-  const vineCount = 30
+  const vineCount = 100
 
   const vines = useMemo(() => {
     return Array.from({ length: vineCount }).map(() => ({
       position: [
-        (Math.random() - 0.5) * 60,
+        (Math.random() - 0.5) * 400,
         15 + Math.random() * 5, // Hanging from canopy height
-        (Math.random() - 0.5) * 60
+        (Math.random() - 0.5) * 400
       ],
       length: 5 + Math.random() * 10,
       delay: Math.random() * Math.PI * 2

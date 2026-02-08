@@ -27,7 +27,7 @@ def run():
         time.sleep(5)
 
         # Initial view (Forest Floor / Mid)
-        page.screenshot(path="verification_initial.png")
+        page.screenshot(path="verification_initial.png", timeout=60000)
         print("Initial screenshot taken")
 
         # Scroll UP (negative deltaY) to go DOWN to River
@@ -36,7 +36,7 @@ def run():
         # We want negative delta_y.
         page.mouse.wheel(0, -2000)
         time.sleep(3) # Wait for interpolation
-        page.screenshot(path="verification_river.png")
+        page.screenshot(path="verification_river.png", timeout=60000)
         print("River screenshot taken")
 
         # Scroll DOWN (positive deltaY) to go UP to Canopy
@@ -44,8 +44,20 @@ def run():
         # Factor is 0.01. So we need 2400 deltaY.
         page.mouse.wheel(0, 4000)
         time.sleep(3)
-        page.screenshot(path="verification_canopy.png")
+        page.screenshot(path="verification_canopy.png", timeout=60000)
         print("Canopy screenshot taken")
+
+        # Test Horizontal Exploration (Drag)
+        # Move mouse to center and drag right (move camera left/west)
+        page.mouse.move(500, 500)
+        page.mouse.down()
+        page.mouse.move(900, 500, steps=20) # Drag 400px right slowly
+        page.mouse.up()
+
+        # Wait for interpolation
+        time.sleep(3)
+        page.screenshot(path="verification_horizontal_pan.png", timeout=60000)
+        print("Horizontal pan screenshot taken")
 
         browser.close()
 
