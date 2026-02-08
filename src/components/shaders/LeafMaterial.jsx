@@ -31,6 +31,7 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.5, ...props }
       shader.uniforms.uWindStrength = uniforms.current.uWindStrength
       shader.uniforms.uWindSpeed = uniforms.current.uWindSpeed
 
+      // --- Vertex Shader ---
       shader.vertexShader = `
 uniform float uTime;
 uniform float uWindStrength;
@@ -78,7 +79,8 @@ uniform float uWindSpeed;
         `
       )
 
-      // Inject noise function for fragment shader
+      // --- Fragment Shader ---
+      // Inject Simplex Noise Function
       shader.fragmentShader = `
         vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
         float snoise(vec2 v){
@@ -109,26 +111,40 @@ uniform float uWindSpeed;
       ` + shader.fragmentShader
 
       shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <map_fragment>',
+        '#include <color_fragment>',
         `
-        #include <map_fragment>
+        #include <color_fragment>
 
-        // Leaf Texture
-        float n = snoise(vUv * 5.0);
-        float vein = snoise(vUv * 20.0);
+        // Leaf Texture / Variation
+        // Use vUv if available, otherwise screen position or something else?
+        // Standard Material usually has vUv if USE_UV is defined.
 
-        // Base variation
-        vec3 col = diffuseColor.rgb;
-        col *= (0.8 + 0.4 * n);
+        #ifdef USE_UV
+          float n = snoise(vUv * 5.0);
+          float vein = snoise(vUv * 20.0);
 
-        // Veins
-        col *= (0.9 + 0.2 * vein);
+          // Base variation
+          diffuseColor.rgb *= (0.9 + 0.2 * n);
 
-        // Edges darker (simple approximation)
-        float dist = distance(vUv, vec2(0.5, 0.5));
-        col *= (1.0 - dist * 0.6);
+          // Veins (subtle)
+          diffuseColor.rgb *= (0.95 + 0.1 * vein);
 
-        diffuseColor.rgb = col;
+          // Darker center/stem (approx)
+          float dist = abs(vUv.x - 0.5);
+          diffuseColor.rgb *= (1.0 - dist * 0.3);
+        #endif
+
+        // Simple Subsurface Scattering Approximation (Backlighting)
+        // Check if light is behind the leaf relative to camera
+        // Using view vector and normal
+
+        // This is a rough hack in Forward rendering without custom uniforms for light dir
+        // But we can simulate "translucency" by brightening the backface
+
+        if (!gl_FrontFacing) {
+            diffuseColor.rgb *= 1.3; // Make backface brighter (simulating light passing through)
+            diffuseColor.rgb += vec3(0.1, 0.2, 0.0); // Add some green tint
+        }
         `
       )
     }
@@ -148,7 +164,7 @@ uniform float uWindSpeed;
       side={THREE.DoubleSide}
       transparent
       alphaTest={0.5}
-      defines={{ USE_UV: '' }}
+      defines={{ USE_UV: '' }} // Force UVs
       {...props}
     />
   )

@@ -6,7 +6,7 @@ import { LeafMaterial } from '../shaders/LeafMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 const TreeConfig = {
-  count: 150,
+  count: 250,
   area: 400,
   minHeight: 12,
   maxHeight: 25,
@@ -131,7 +131,7 @@ const Canopy = () => {
       if (terrainH < -0.5) continue;
 
       const height = TreeConfig.minHeight + Math.random() * (TreeConfig.maxHeight - TreeConfig.minHeight)
-      const scaleBase = 1.5 + Math.random() * 1.0 // Thicker trunks
+      const scaleBase = 2.0 + Math.random() * 2.0 // Thicker, ancient trunks
       const rotation = Math.random() * Math.PI * 2
 
       // Trunk

@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment, Sparkles } from '@react-three/drei'
+import { ContactShadows, Environment, Sparkles, Cloud } from '@react-three/drei'
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
@@ -24,18 +24,18 @@ const Scene = ({ audioStarted }) => {
       camera={{ position: [0, 2, 10], fov: 45 }}
       style={{ background: '#051605' }} // Deep forest dark green
     >
-      {/* Fog for depth and atmosphere - slightly increased range and lighter green for mist */}
-      <fog attach="fog" args={['#081808', 20, 250]} />
+      {/* Fog for depth and atmosphere - adjusted for denser, moodier feel */}
+      <fog attach="fog" args={['#0a2a0a', 15, 200]} />
 
       <AudioController started={audioStarted} />
 
-      {/* Natural Ambient Light (Sky + Ground bounce) */}
-      <hemisphereLight intensity={0.6} groundColor="#2e1e0f" color="#dceef2" />
+      {/* Environment Lighting replaces generic HemisphereLight for more realism */}
+      <Environment preset="forest" background={false} environmentIntensity={0.8} />
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
         position={[50, 100, 50]}
-        intensity={2.0}
+        intensity={2.5}
         color="#fff5e6" // Warm sunlight
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -44,8 +44,12 @@ const Scene = ({ audioStarted }) => {
         <orthographicCamera attach="shadow-camera" args={[-200, 200, 200, -200, 0.1, 500]} />
       </directionalLight>
 
+      {/* Atmospheric Clouds */}
+      <Cloud opacity={0.4} speed={0.2} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
+      <Cloud opacity={0.3} speed={0.1} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
+
       {/* Floating Particles (Pollen/Spores) */}
-      <Sparkles count={2000} scale={[400, 50, 400]} size={6} speed={0.3} opacity={0.4} color="#ccffcc" />
+      <Sparkles count={3000} scale={[400, 50, 400]} size={4} speed={0.4} opacity={0.5} color="#ccffcc" />
 
       <CameraController />
 
@@ -70,13 +74,11 @@ const Scene = ({ audioStarted }) => {
       <Butterfly position={[2, 3, -6]} />
       <Butterfly position={[0, 3.5, -9]} />
 
-      <Environment preset="forest" background={false} />
-
       {/* Soft contact shadows for grounding objects */}
       <ContactShadows
         opacity={0.6}
         scale={60}
-        blur={2}
+        blur={2.5}
         far={2.0}
         resolution={512}
         color="#000000"
@@ -84,8 +86,8 @@ const Scene = ({ audioStarted }) => {
 
       {/* Post Processing for Realism */}
       <EffectComposer disableNormalPass>
-        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} height={300} intensity={0.5} />
-        <Noise opacity={0.02} />
+        <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} height={300} intensity={0.4} />
+        <Noise opacity={0.025} />
         <Vignette eskil={false} offset={0.1} darkness={1.1} />
       </EffectComposer>
     </Canvas>
