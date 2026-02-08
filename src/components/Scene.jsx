@@ -16,6 +16,7 @@ import Sloth from './entities/Sloth'
 import Macaw from './entities/Macaw'
 import Rain from './environment/Rain'
 import Fireflies from './environment/Fireflies'
+import Lightning from './environment/Lightning'
 
 const Scene = ({ audioStarted }) => {
   return (
@@ -45,11 +46,14 @@ const Scene = ({ audioStarted }) => {
       </directionalLight>
 
       {/* Atmospheric Clouds */}
-      <Cloud opacity={0.4} speed={0.2} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
-      <Cloud opacity={0.3} speed={0.1} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
+      <Cloud opacity={0.4} speed={0.1} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
+      <Cloud opacity={0.3} speed={0.05} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
 
-      {/* Floating Particles (Pollen/Spores) */}
-      <Sparkles count={3000} scale={[400, 50, 400]} size={4} speed={0.4} opacity={0.5} color="#ccffcc" />
+      {/* Floating Particles (Pollen/Spores) - Reduced visual noise */}
+      <Sparkles count={3000} scale={[400, 50, 400]} size={2} speed={0.4} opacity={0.3} color="#ccffcc" />
+
+      {/* Controlled Lightning - Very rare */}
+      <Lightning />
 
       <CameraController />
 
