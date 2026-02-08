@@ -2,15 +2,23 @@ import React, { useRef, useLayoutEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export function LeafMaterial(props) {
+export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.5, ...props }) {
   const materialRef = useRef()
 
   // Uniforms must be stable ref
   const uniforms = useRef({
     uTime: { value: 0 },
-    uWindStrength: { value: 0.5 }, // Increased strength for visibility
-    uWindSpeed: { value: 1.5 }
+    uWindStrength: { value: uWindStrength },
+    uWindSpeed: { value: uWindSpeed }
   })
+
+  // Update uniforms when props change
+  useLayoutEffect(() => {
+    if (uniforms.current) {
+      uniforms.current.uWindStrength.value = uWindStrength
+      uniforms.current.uWindSpeed.value = uWindSpeed
+    }
+  }, [uWindStrength, uWindSpeed])
 
   useLayoutEffect(() => {
     if (!materialRef.current) return

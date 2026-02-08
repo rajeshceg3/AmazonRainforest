@@ -1,125 +1,182 @@
-import { useMemo, useCallback } from 'react'
-import { extend } from '@react-three/fiber'
+import React, { useMemo, useCallback } from 'react'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
+import { LeafMaterial } from '../shaders/LeafMaterial'
 import TerrainMaterial from '../shaders/TerrainMaterial'
+import { getTerrainHeight } from '../../utils/TerrainHeight'
 
+import { extend } from '@react-three/fiber'
 extend({ TerrainMaterial })
 
-const FernGeometry = () => {
+// Helper to create Fern Geometry
+const useFernGeometry = () => {
   return useMemo(() => {
-    const geometry = new THREE.BufferGeometry()
+    // Single frond geometry
+    const frond = new THREE.PlaneGeometry(0.3, 1.0, 2, 6)
+    frond.translate(0, 0.5, 0) // Pivot at bottom
 
-    const numLeaves = 7
-    const vertices = []
+    const pos = frond.attributes.position
+    const v = new THREE.Vector3()
 
-    for(let i=0; i<numLeaves; i++) {
-        const angle = (i / numLeaves) * Math.PI * 2
+    // Shape the frond
+    for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i)
+        // Normalize Y (0 to 1)
+        const yNorm = v.y / 1.0
 
-        const height = 1.0 + Math.random() * 0.5
-        const width = 0.25
-        const lean = 0.8
+        // Taper width: wider at 0.2, zero at 1.0
+        // Base width (y=0) is 0.3.
+        // Let's make it oval-ish.
+        const widthScale = Math.sin(Math.acos(Math.abs(yNorm * 2 - 1))) // Circular profile?
+        // Or simple taper:
+        const taper = 1.0 - Math.pow(yNorm, 1.5)
+        v.x *= taper
 
-        // Tip position
-        const xTip = Math.sin(angle) * lean
-        const zTip = Math.cos(angle) * lean
-        const yTip = height * 0.7
+        // Curl: Bend backwards (Z)
+        // Frond curls out and down slightly?
+        // Let's curve it like a fern: )
+        const curve = Math.pow(yNorm, 2.0) * 0.5
+        v.z += curve // Bend backward relative to front face
 
-        // Base L/R
-        const xL = Math.sin(angle - 0.2) * width
-        const zL = Math.cos(angle - 0.2) * width
+        pos.setXYZ(i, v.x, v.y, v.z)
+    }
+    frond.computeVertexNormals()
 
-        const xR = Math.sin(angle + 0.2) * width
-        const zR = Math.cos(angle + 0.2) * width
+    // Assemble fern from fronds
+    const fern = new THREE.BufferGeometry()
+    const frondCount = 7
+    const geometries = []
 
-        // Triangle 1: BaseL, BaseR, Tip
-        vertices.push(xL, 0, zL)
-        vertices.push(xR, 0, zR)
-        vertices.push(xTip, yTip, zTip)
+    for(let i=0; i<frondCount; i++) {
+        const f = frond.clone()
+        const angle = (i / frondCount) * Math.PI * 2 + (Math.random() * 0.5)
 
-        // Backside
-        vertices.push(xL, 0, zL)
-        vertices.push(xTip, yTip, zTip)
-        vertices.push(xR, 0, zR)
+        // Rotate around Y
+        f.rotateY(angle)
+
+        // Rotate out (bloom)
+        f.rotateX(0.5 + Math.random() * 0.3)
+
+        geometries.push(f)
     }
 
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-    geometry.computeVertexNormals()
-    return geometry
+    // Merge
+    // Use Utils to merge? Or manual?
+    // Manual is safer for custom attributes if needed, but Utils.mergeBufferGeometries is standard.
+    // However, merging BufferGeometries is easy.
+    // Let's use manual merge similar to Canopy to avoid dependency issues or imports if not available.
+    // Actually, THREE.BufferGeometryUtils might not be imported.
+    // Manual merge:
+
+    let totalVerts = 0
+    geometries.forEach(g => totalVerts += g.attributes.position.count)
+
+    const mergedPos = new Float32Array(totalVerts * 3)
+    const mergedNorm = new Float32Array(totalVerts * 3)
+    const mergedUV = new Float32Array(totalVerts * 2)
+    const indices = []
+
+    let offset = 0
+
+    geometries.forEach(g => {
+        const p = g.attributes.position.array
+        const n = g.attributes.normal.array
+        const uv = g.attributes.uv.array
+        const idx = g.index ? g.index.array : null
+
+        mergedPos.set(p, offset * 3)
+        mergedNorm.set(n, offset * 3)
+        mergedUV.set(uv, offset * 2)
+
+        if (idx) {
+            for(let j=0; j<idx.length; j++) {
+                indices.push(idx[j] + offset)
+            }
+        } else {
+             for(let j=0; j<g.attributes.position.count; j++) {
+                indices.push(j + offset)
+            }
+        }
+
+        offset += g.attributes.position.count
+    })
+
+    fern.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3))
+    fern.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3))
+    fern.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2))
+    if(indices.length > 0) fern.setIndex(indices)
+
+    return fern
   }, [])
 }
 
-const GrassGeometry = () => {
+const useGrassGeometry = () => {
     return useMemo(() => {
-        // Tapered and bent plane for grass blade
-        const geometry = new THREE.PlaneGeometry(0.1, 0.8, 2, 4)
+        const geometry = new THREE.PlaneGeometry(0.08, 0.6, 2, 4)
+        geometry.translate(0, 0.3, 0)
+
         const pos = geometry.attributes.position
+        const v = new THREE.Vector3()
 
         for(let i=0; i<pos.count; i++){
-             const y = pos.getY(i) // -0.4 to 0.4 usually
-             // Normalize 0 (bottom) to 1 (top)
-             // Y is centered, so -0.4 is bottom, 0.4 is top
-             const normY = Math.max(0, (y + 0.4) / 0.8)
+             v.fromBufferAttribute(pos, i)
+             const yNorm = v.y / 0.6
 
-             // Taper width: 1.0 at bottom, 0.0 at top
-             const widthScale = 1.0 - Math.pow(normY, 1.5)
-             pos.setX(i, pos.getX(i) * widthScale)
+             // Taper
+             v.x *= (1.0 - Math.pow(yNorm, 2.0))
 
-             // Bend Z: 0 at bottom, increases with height
-             const bend = normY * normY * 0.3
-             pos.setZ(i, pos.getZ(i) + bend)
+             // Bend
+             v.z += Math.pow(yNorm, 2.0) * 0.2
+
+             pos.setXYZ(i, v.x, v.y, v.z)
         }
-
         geometry.computeVertexNormals()
-        geometry.translate(0, 0.4, 0) // Pivot at bottom
         return geometry
     }, [])
 }
 
 const ForestFloor = () => {
-  const fernCount = 1000
-  const grassCount = 10000
+  const fernCount = 800
+  const grassCount = 8000
 
-  const fernGeo = FernGeometry()
-  const grassGeo = GrassGeometry()
-
-  const getHeight = useCallback((x, z) => {
-      const y = -z // Map world Z to noise Y
-      return (Math.sin(x * 0.1) + Math.cos(y * 0.1)) * 0.5 * 2.5
-             + (Math.sin(x * 0.3 + y * 0.2)) * 0.2 * 2.5
-  }, [])
+  const fernGeo = useFernGeometry()
+  const grassGeo = useGrassGeometry()
 
   const groundGeo = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(400, 400, 512, 512)
+    const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
     const pos = geo.attributes.position
-    // Keep noise logic for height, remove vertex colors
+
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
-      const y = pos.getY(i) // Plane Y is Z in world (rotated later)
+      const y = pos.getY(i) // Plane Y corresponds to World -Z (roughly, due to rotation)
 
-      // Apply noise displacement based on X and Y (which maps to world X and -Z)
-      // This ensures the ground matches the object placement logic in getHeight
-      const noise = (Math.sin(x * 0.1) + Math.cos(y * 0.1)) * 0.5
-                  + (Math.sin(x * 0.3 + y * 0.2)) * 0.2
+      // Rotated -90 deg X: Plane Y+ -> World Z-
+      // So World Z = -y
+      const h = getTerrainHeight(x, -y)
 
-      const h = noise * 2.5
       pos.setZ(i, h)
     }
     geo.computeVertexNormals()
     return geo
   }, [])
 
-  // Precompute instance data with color variation
   const grassData = useMemo(() => {
       const data = []
       const baseColor = new THREE.Color("#4a6f1b")
+
       for(let i=0; i<grassCount; i++) {
-          const x = (Math.random() - 0.5) * 400
-          const z = (Math.random() - 0.5) * 400
-          const h = getHeight(x, z)
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          // Don't spawn underwater (River is approx -0.5, give some buffer)
+          if (h < -0.4) continue;
+
+          // Clumping: Use noise to skip some
+          const density = Math.sin(x * 0.05) * Math.cos(z * 0.05)
+          if (density < -0.5) continue;
 
           const color = baseColor.clone()
-          // Vary hue slightly and lightness significantly
           color.offsetHSL((Math.random() - 0.5) * 0.1, 0, (Math.random() - 0.5) * 0.2)
 
           data.push({
@@ -130,15 +187,23 @@ const ForestFloor = () => {
           })
       }
       return data
-  }, [grassCount, getHeight])
+  }, [grassCount])
 
   const fernData = useMemo(() => {
       const data = []
       const baseColor = new THREE.Color("#2d5a27")
+
       for(let i=0; i<fernCount; i++) {
-          const x = (Math.random() - 0.5) * 400
-          const z = (Math.random() - 0.5) * 400
-          const h = getHeight(x, z)
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          // Ferns prefer shade/higher ground?
+          if (h < -0.3) continue;
+
+          // Clumping
+          const density = Math.sin(x * 0.08 + 10) * Math.cos(z * 0.08 + 10)
+          if (density < -0.2) continue;
 
           const color = baseColor.clone()
           color.offsetHSL((Math.random() - 0.5) * 0.05, 0, (Math.random() - 0.5) * 0.15)
@@ -146,23 +211,29 @@ const ForestFloor = () => {
           data.push({
               position: [x, h, z],
               rotation: [0, Math.random() * Math.PI * 2, 0],
-              scale: [0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5], // uniform scale mostly
+              scale: [0.8 + Math.random() * 0.4, 0.8 + Math.random() * 0.4, 0.8 + Math.random() * 0.4],
               color: color
           })
       }
       return data
-  }, [fernCount, getHeight])
-
+  }, [fernCount])
 
   return (
     <group>
+        {/* Ground Mesh */}
         <mesh geometry={groundGeo} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+             {/* Using standard material or custom terrain material?
+                 The previous file imported TerrainMaterial.
+                 Let's stick to standard if TerrainMaterial is not fully robust,
+                 or use TerrainMaterial if it's good.
+                 The previous file used <terrainMaterial ... />.
+                 Let's assume it works. */}
             <terrainMaterial uScale={0.1} uColorSoil={new THREE.Color("#2b1d0e")} uColorMoss={new THREE.Color("#1a331a")} />
         </mesh>
 
-        {/* Grass */}
-        <Instances range={grassCount} geometry={grassGeo}>
-            <meshStandardMaterial color="#ffffff" vertexColors side={THREE.DoubleSide} roughness={0.8} />
+        {/* Grass Instances */}
+        <Instances range={grassData.length} geometry={grassGeo} castShadow receiveShadow>
+            <LeafMaterial color="#4a6f1b" uWindStrength={0.3} uWindSpeed={1.0} vertexColors />
             {grassData.map((data, i) => (
                 <Instance
                     key={`grass-${i}`}
@@ -174,9 +245,9 @@ const ForestFloor = () => {
             ))}
         </Instances>
 
-        {/* Ferns */}
-        <Instances range={fernCount} geometry={fernGeo} castShadow receiveShadow>
-             <meshStandardMaterial color="#ffffff" vertexColors side={THREE.DoubleSide} roughness={0.8} />
+        {/* Fern Instances */}
+        <Instances range={fernData.length} geometry={fernGeo} castShadow receiveShadow>
+             <LeafMaterial color="#2d5a27" uWindStrength={0.2} uWindSpeed={0.8} vertexColors />
              {fernData.map((data, i) => (
                  <Instance
                     key={`fern-${i}`}
@@ -190,4 +261,5 @@ const ForestFloor = () => {
     </group>
   )
 }
+
 export default ForestFloor

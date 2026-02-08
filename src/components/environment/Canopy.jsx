@@ -1,11 +1,9 @@
-import { useMemo } from 'react'
-import { extend } from '@react-three/fiber'
+import React, { useMemo } from 'react'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
-import BarkMaterial from '../shaders/BarkMaterial'
+import { BarkMaterial } from '../shaders/BarkMaterial.jsx'
 import { LeafMaterial } from '../shaders/LeafMaterial'
-
-extend({ BarkMaterial })
+import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 const TreeConfig = {
   count: 150,
@@ -14,66 +12,64 @@ const TreeConfig = {
   maxHeight: 25,
 }
 
-const WobblyTrunkGeometry = () => {
+// Improved Trunk Geometry: High segmentation for shader displacement
+const TrunkGeometry = () => {
     return useMemo(() => {
-        const curve = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0.3, 4, 0.2),
-            new THREE.Vector3(-0.2, 8, -0.3),
-            new THREE.Vector3(0.1, 12, 0.1),
-            new THREE.Vector3(0, 15, 0)
-        ])
-        return new THREE.TubeGeometry(curve, 16, 0.4, 8, false)
+        // Tapered cylinder: top radius 0.2, bottom 0.8, height 1 (scaled later), segments
+        const geo = new THREE.CylinderGeometry(0.2, 0.8, 1, 12, 16)
+        geo.translate(0, 0.5, 0) // Pivot at bottom
+        return geo
     }, [])
 }
 
+// Improved Leaf Cluster: Denser and more organic
 const LeafClusterGeometry = () => {
     return useMemo(() => {
-        // Create a single curved leaf
-        const singleLeaf = new THREE.PlaneGeometry(0.8, 1.2, 4, 8)
+        // Base leaf shape
+        const singleLeaf = new THREE.PlaneGeometry(0.8, 1.2, 2, 4)
         singleLeaf.translate(0, 0.6, 0) // Pivot at bottom
 
         const pos = singleLeaf.attributes.position
         const v = new THREE.Vector3()
 
-        // Bend the single leaf
+        // Bend the leaf to be less flat
         for (let i = 0; i < pos.count; i++) {
             v.fromBufferAttribute(pos, i)
-            // Bend along length (Y)
-            const bend = Math.pow(v.y, 1.5) * 0.5
+            const bend = Math.pow(Math.max(0, v.y), 1.5) * 0.5
             v.z += bend
-            // Curve across width (X)
-            v.z += Math.pow(v.x, 2) * -0.5
-            // Taper width at top
-            if(v.y > 0.5) {
-                v.x *= (1.2 - v.y) * 2.0; // Simple taper
-            }
+            v.x *= (1.2 - v.y * 0.5) // Taper
             pos.setXYZ(i, v.x, v.y, v.z)
         }
         singleLeaf.computeVertexNormals()
 
-        // Merge 4 leaves into a cluster
         const cluster = new THREE.BufferGeometry()
-        const leafCount = 5
+        const leafCount = 12
         const geometries = []
 
         for(let i=0; i<leafCount; i++) {
             const leaf = singleLeaf.clone()
-            // Rotate around Y
+
+            // Distribute leaves in a semi-sphere or branch-like pattern
             const angle = (i / leafCount) * Math.PI * 2 + (Math.random() - 0.5)
-            leaf.rotateY(angle)
-            // Tilt out slightly
-            leaf.rotateX(Math.PI * 0.15)
-            leaf.rotateZ((Math.random()-0.5) * 0.2)
+            const height = Math.random() * 0.5
+            const radius = Math.random() * 0.5
+
+            // Position relative to cluster center
+            leaf.translate(Math.cos(angle) * radius, height, Math.sin(angle) * radius)
+
+            // Random rotations
+            leaf.rotateY(Math.random() * Math.PI * 2)
+            leaf.rotateX((Math.random() - 0.5) * 1.0)
+            leaf.rotateZ((Math.random() - 0.5) * 1.0)
+
+            // Scale variation
+            const s = 0.5 + Math.random() * 0.8
+            leaf.scale(s, s, s)
+
             geometries.push(leaf)
         }
 
-        // Manually merge
-        // Since we can't depend on BufferGeometryUtils, we just create a new geometry from the list
-        // Actually, just use one geometry and draw multiple instances per cluster?
-        // No, 'Instances' component draws the *cluster* as one instance.
-
-        // Simple manual merge
+        // Merge geometries manually
         let totalVerts = 0
         geometries.forEach(g => totalVerts += g.attributes.position.count)
 
@@ -83,20 +79,25 @@ const LeafClusterGeometry = () => {
         const indices = []
 
         let offset = 0
-        let indexOffset = 0
 
         geometries.forEach(g => {
             const p = g.attributes.position.array
             const n = g.attributes.normal.array
             const uv = g.attributes.uv.array
-            const idx = g.index.array
+            const idx = g.index ? g.index.array : null
 
             mergedPos.set(p, offset * 3)
             mergedNorm.set(n, offset * 3)
             mergedUV.set(uv, offset * 2)
 
-            for(let j=0; j<idx.length; j++) {
-                indices.push(idx[j] + offset)
+            if (idx) {
+                for(let j=0; j<idx.length; j++) {
+                    indices.push(idx[j] + offset)
+                }
+            } else {
+                 for(let j=0; j<g.attributes.position.count; j++) {
+                    indices.push(j + offset)
+                }
             }
 
             offset += g.attributes.position.count
@@ -105,55 +106,62 @@ const LeafClusterGeometry = () => {
         cluster.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3))
         cluster.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3))
         cluster.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2))
-        cluster.setIndex(indices)
+        if(indices.length > 0) cluster.setIndex(indices)
 
         return cluster
     }, [])
 }
 
 const Canopy = () => {
-  const trunkGeo = WobblyTrunkGeometry()
+  const trunkGeo = TrunkGeometry()
   const leafClusterGeo = LeafClusterGeometry()
 
   const { trunks, leaves } = useMemo(() => {
     const trunks = []
     const leaves = []
-    // Varied greens
     const leafColors = ["#2d4a22", "#3a5f2d", "#4c7a3b", "#1e3618", "#5e8c4b"]
 
     for (let i = 0; i < TreeConfig.count; i++) {
       const x = (Math.random() - 0.5) * TreeConfig.area
       const z = (Math.random() - 0.5) * TreeConfig.area
+
+      const terrainH = getTerrainHeight(x, z)
+
+      // Avoid river (if too low)
+      if (terrainH < -0.5) continue;
+
       const height = TreeConfig.minHeight + Math.random() * (TreeConfig.maxHeight - TreeConfig.minHeight)
-      const scaleBase = 0.8 + Math.random() * 0.6
+      const scaleBase = 1.5 + Math.random() * 1.0 // Thicker trunks
       const rotation = Math.random() * Math.PI * 2
 
       // Trunk
+      // Height is handled by scaling Y
       trunks.push({
-        position: [x, 0, z],
-        scale: [scaleBase, height / 15, scaleBase],
+        position: [x, terrainH, z],
+        scale: [scaleBase, height, scaleBase],
         rotation: [0, rotation, 0]
       })
 
-      // Canopy Clusters (Leaves)
-      // Increase cluster count for density
-      const clusterCount = 12 + Math.floor(Math.random() * 8)
+      // Canopy Clusters
+      const clusterCount = 20 + Math.floor(Math.random() * 15) // Denser canopy
 
       for (let c = 0; c < clusterCount; c++) {
-          const clusterH = height * (0.6 + Math.random() * 0.4) // Top 40%
-          // Dist from center - wider at bottom of canopy
-          const rMax = 5 * scaleBase * (1.0 - (clusterH - height*0.6)/(height*0.4) * 0.5)
-          const r = Math.random() * rMax
+          // Distribution: cone-like at top
+          const hRatio = 0.5 + Math.random() * 0.5 // Top 50%
+          const clusterY = height * hRatio
+
+          // Radius increases as we go down from top
+          const maxR = 6.0 * (1.0 - (hRatio - 0.5)*2.0) + 2.0
+          const r = Math.random() * maxR
           const theta = Math.random() * Math.PI * 2
 
-          const cx = x + Math.cos(theta) * r
-          const cz = z + Math.sin(theta) * r
-          const cy = clusterH
+          const lx = x + Math.cos(theta) * r
+          const lz = z + Math.sin(theta) * r
 
           leaves.push({
-              position: [cx, cy, cz],
+              position: [lx, terrainH + clusterY, lz],
               rotation: [Math.random()*0.5, Math.random()*Math.PI*2, Math.random()*0.5],
-              scale: 0.8 + Math.random() * 0.5,
+              scale: 1.0 + Math.random() * 0.8,
               color: leafColors[Math.floor(Math.random() * leafColors.length)]
           })
       }
@@ -165,7 +173,7 @@ const Canopy = () => {
     <group>
       {/* Trunks */}
       <Instances range={trunks.length} geometry={trunkGeo} castShadow receiveShadow>
-        <barkMaterial uScale={4.0} uColor={new THREE.Color("#3d2817")} />
+        <BarkMaterial />
         {trunks.map((data, i) => (
           <Instance key={`trunk-${i}`} position={data.position} scale={data.scale} rotation={data.rotation} />
         ))}
@@ -173,7 +181,7 @@ const Canopy = () => {
 
       {/* Leaves */}
       <Instances range={leaves.length} geometry={leafClusterGeo} castShadow receiveShadow>
-        <LeafMaterial color="#ffffff" />
+        <LeafMaterial />
         {leaves.map((data, i) => (
           <Instance
             key={`leaf-${i}`}
