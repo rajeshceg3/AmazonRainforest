@@ -2,11 +2,8 @@ import React, { useMemo } from 'react'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 import { LeafMaterial } from '../shaders/LeafMaterial'
-import TerrainMaterial from '../shaders/TerrainMaterial'
+import { TerrainMaterial } from '../shaders/TerrainMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
-
-import { extend } from '@react-three/fiber'
-extend({ TerrainMaterial })
 
 // Helper to create Fern Geometry
 const useFernGeometry = () => {
@@ -222,13 +219,7 @@ const ForestFloor = () => {
     <group>
         {/* Ground Mesh */}
         <mesh geometry={groundGeo} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-             {/* Using standard material or custom terrain material?
-                 The previous file imported TerrainMaterial.
-                 Let's stick to standard if TerrainMaterial is not fully robust,
-                 or use TerrainMaterial if it's good.
-                 The previous file used <terrainMaterial ... />.
-                 Let's assume it works. */}
-            <terrainMaterial uScale={0.1} uColorSoil={new THREE.Color("#2b1d0e")} uColorMoss={new THREE.Color("#1a331a")} />
+            <TerrainMaterial uScale={0.1} uColorSoil={new THREE.Color("#2b1d0e")} uColorMoss={new THREE.Color("#1a331a")} />
         </mesh>
 
         {/* Grass Instances */}

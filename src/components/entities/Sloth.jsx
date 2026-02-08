@@ -1,9 +1,7 @@
 import { useRef } from 'react'
-import { useFrame, extend } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import FurMaterial from '../shaders/FurMaterial'
-
-extend({ FurMaterial })
+import { FurMaterial } from '../shaders/FurMaterial'
 
 const Sloth = ({ position = [0, 10, 0] }) => {
   const group = useRef()
@@ -30,7 +28,7 @@ const Sloth = ({ position = [0, 10, 0] }) => {
   })
 
   const furMaterial = (
-      <furMaterial
+      <FurMaterial
         uColor={new THREE.Color("#6d5e52")}
         uColorTip={new THREE.Color("#556b2f")} // Mossy green tip
         uScale={3.0}

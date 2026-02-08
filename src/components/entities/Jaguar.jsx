@@ -1,9 +1,7 @@
 import { useRef, useMemo } from 'react'
-import { useFrame, extend } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import JaguarFurMaterial from '../shaders/JaguarFurMaterial'
-
-extend({ JaguarFurMaterial })
+import { JaguarFurMaterial } from '../shaders/JaguarFurMaterial'
 
 const Jaguar = ({ position = [0, 0, 0] }) => {
   const group = useRef()
@@ -59,7 +57,7 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
   })
 
   const furMaterial = (
-      <jaguarFurMaterial
+      <JaguarFurMaterial
         uScale={6.0}
         uColor={new THREE.Color("#d49b5c")}
         uSpotColor={new THREE.Color("#2b1d0e")}
