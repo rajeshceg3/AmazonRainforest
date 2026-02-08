@@ -1,0 +1,17 @@
+Console: [vite] connecting...
+Console: [vite] connected.
+Console: %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+Console: %c * Tone.js v15.1.22 *  background: #000; color: #fff
+Console: The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+Console: The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+Console: [GroupMarkerNotSet(crbug.com/242999)!:A050180074390000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader (about:flags#enable-unsafe-swiftshader) flag to opt in to lower security guarantees for trusted content.
+Console: [.WebGL-0x10d400132c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+Console: [.WebGL-0x10d400132c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+Console: [.WebGL-0x10d400132c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+Console: [.WebGL-0x10d400132c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+Start button clicked
+Console: Initializing Soundscape Manager
+Initial screenshot taken
+River screenshot taken
+Canopy screenshot taken
+Horizontal pan screenshot taken
