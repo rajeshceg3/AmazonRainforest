@@ -120,6 +120,7 @@ export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotCo
       ref={materialRef}
       roughness={0.6}
       metalness={0.1}
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )

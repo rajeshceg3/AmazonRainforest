@@ -87,6 +87,7 @@ export function DolphinSkinMaterial({ uColorBase = new THREE.Color('#eecbcb'), u
       ref={materialRef}
       roughness={0.2}
       metalness={0.1}
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )

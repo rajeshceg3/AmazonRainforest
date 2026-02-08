@@ -1,11 +1,14 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, Sparkles } from '@react-three/drei'
+import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
 import River from './environment/River'
 import Understory from './environment/Understory'
+import Rocks from './environment/Rocks'
+import WaterLilies from './environment/WaterLilies'
 import Butterfly from './entities/Butterfly'
 import Jaguar from './entities/Jaguar'
 import PinkDolphin from './entities/PinkDolphin'
@@ -48,6 +51,8 @@ const Scene = ({ audioStarted }) => {
 
       <ForestFloor />
       <River />
+      <Rocks />
+      <WaterLilies />
       <Understory />
       <Canopy />
 
@@ -76,6 +81,13 @@ const Scene = ({ audioStarted }) => {
         resolution={512}
         color="#000000"
       />
+
+      {/* Post Processing for Realism */}
+      <EffectComposer disableNormalPass>
+        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} height={300} intensity={0.5} />
+        <Noise opacity={0.02} />
+        <Vignette eskil={false} offset={0.1} darkness={1.1} />
+      </EffectComposer>
     </Canvas>
   )
 }

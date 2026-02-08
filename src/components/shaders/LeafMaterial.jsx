@@ -148,6 +148,7 @@ uniform float uWindSpeed;
       side={THREE.DoubleSide}
       transparent
       alphaTest={0.5}
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )
