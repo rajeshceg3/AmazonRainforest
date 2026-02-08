@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { extend } from '@react-three/fiber'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
@@ -83,15 +83,22 @@ const ForestFloor = () => {
   const fernGeo = FernGeometry()
   const grassGeo = GrassGeometry()
 
+  const getHeight = useCallback((x, z) => {
+      const y = -z // Map world Z to noise Y
+      return (Math.sin(x * 0.1) + Math.cos(y * 0.1)) * 0.5 * 2.5
+             + (Math.sin(x * 0.3 + y * 0.2)) * 0.2 * 2.5
+  }, [])
+
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 512, 512)
     const pos = geo.attributes.position
     // Keep noise logic for height, remove vertex colors
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
-      const y = pos.getY(i) // Plane Y is Z in world
+      const y = pos.getY(i) // Plane Y is Z in world (rotated later)
 
-      // Noise function (simulated)
+      // Apply noise displacement based on X and Y (which maps to world X and -Z)
+      // This ensures the ground matches the object placement logic in getHeight
       const noise = (Math.sin(x * 0.1) + Math.cos(y * 0.1)) * 0.5
                   + (Math.sin(x * 0.3 + y * 0.2)) * 0.2
 
@@ -102,12 +109,50 @@ const ForestFloor = () => {
     return geo
   }, [])
 
-  // Helper to get height at x, z to place objects on ground
-  const getHeight = (x, z) => {
-      const y = -z
-      return (Math.sin(x * 0.1) + Math.cos(y * 0.1)) * 0.5 * 2.5
-             + (Math.sin(x * 0.3 + y * 0.2)) * 0.2 * 2.5
-  }
+  // Precompute instance data with color variation
+  const grassData = useMemo(() => {
+      const data = []
+      const baseColor = new THREE.Color("#4a6f1b")
+      for(let i=0; i<grassCount; i++) {
+          const x = (Math.random() - 0.5) * 400
+          const z = (Math.random() - 0.5) * 400
+          const h = getHeight(x, z)
+
+          const color = baseColor.clone()
+          // Vary hue slightly and lightness significantly
+          color.offsetHSL((Math.random() - 0.5) * 0.1, 0, (Math.random() - 0.5) * 0.2)
+
+          data.push({
+              position: [x, h, z],
+              rotation: [0, Math.random() * Math.PI, 0],
+              scale: [1 + Math.random()*0.5, 0.8 + Math.random() * 0.5, 1],
+              color: color
+          })
+      }
+      return data
+  }, [grassCount, getHeight])
+
+  const fernData = useMemo(() => {
+      const data = []
+      const baseColor = new THREE.Color("#2d5a27")
+      for(let i=0; i<fernCount; i++) {
+          const x = (Math.random() - 0.5) * 400
+          const z = (Math.random() - 0.5) * 400
+          const h = getHeight(x, z)
+
+          const color = baseColor.clone()
+          color.offsetHSL((Math.random() - 0.5) * 0.05, 0, (Math.random() - 0.5) * 0.15)
+
+          data.push({
+              position: [x, h, z],
+              rotation: [0, Math.random() * Math.PI * 2, 0],
+              scale: [0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5], // uniform scale mostly
+              color: color
+          })
+      }
+      return data
+  }, [fernCount, getHeight])
+
 
   return (
     <group>
@@ -117,38 +162,30 @@ const ForestFloor = () => {
 
         {/* Grass */}
         <Instances range={grassCount} geometry={grassGeo}>
-            <meshStandardMaterial color="#4a6f1b" side={THREE.DoubleSide} roughness={0.8} />
-            {Array.from({ length: grassCount }).map((_, i) => {
-                const x = (Math.random() - 0.5) * 400
-                const z = (Math.random() - 0.5) * 400
-                const h = getHeight(x, z)
-                return (
-                    <Instance
-                        key={`grass-${i}`}
-                        position={[x, h, z]}
-                        rotation={[0, Math.random() * Math.PI, 0]}
-                        scale={[1 + Math.random()*0.5, 0.8 + Math.random() * 0.5, 1]}
-                    />
-                )
-            })}
+            <meshStandardMaterial color="#ffffff" vertexColors side={THREE.DoubleSide} roughness={0.8} />
+            {grassData.map((data, i) => (
+                <Instance
+                    key={`grass-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                />
+            ))}
         </Instances>
 
         {/* Ferns */}
         <Instances range={fernCount} geometry={fernGeo} castShadow receiveShadow>
-             <meshStandardMaterial color="#2d5a27" side={THREE.DoubleSide} roughness={0.8} />
-             {Array.from({ length: fernCount }).map((_, i) => {
-                 const x = (Math.random() - 0.5) * 400
-                 const z = (Math.random() - 0.5) * 400
-                 const h = getHeight(x, z)
-                 return (
-                     <Instance
-                        key={`fern-${i}`}
-                        position={[x, h, z]}
-                        rotation={[0, Math.random() * Math.PI * 2, 0]}
-                        scale={0.5 + Math.random() * 0.5}
-                     />
-                 )
-             })}
+             <meshStandardMaterial color="#ffffff" vertexColors side={THREE.DoubleSide} roughness={0.8} />
+             {fernData.map((data, i) => (
+                 <Instance
+                    key={`fern-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                 />
+             ))}
         </Instances>
     </group>
   )

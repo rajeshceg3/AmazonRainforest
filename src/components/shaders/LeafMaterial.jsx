@@ -40,7 +40,9 @@ uniform float uWindSpeed;
 
         #ifdef USE_INSTANCING
           // instanceMatrix is an attribute containing the transform for this instance
-          worldPosProxy = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+          // modelMatrix is a uniform containing the transform for the InstancedMesh
+          // We transform (0,0,0) local to world
+          worldPosProxy = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         #else
           worldPosProxy = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         #endif

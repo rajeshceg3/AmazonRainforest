@@ -93,9 +93,8 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
                         <mesh geometry={muscleGeo} scale={[0.18, 0.18, 0.2]} castShadow receiveShadow>
                             {furMaterial}
                         </mesh>
-                        {/* Snout */}
-                        <mesh position={[0, -0.05, 0.18]} castShadow receiveShadow>
-                            <boxGeometry args={[0.12, 0.1, 0.15]} />
+                        {/* Snout - Rounded */}
+                        <mesh geometry={muscleGeo} scale={[0.06, 0.05, 0.08]} position={[0, -0.05, 0.18]} castShadow receiveShadow>
                             <meshStandardMaterial color="#e0ac69" roughness={0.6} />
                         </mesh>
                         {/* Ears - small spheres */}

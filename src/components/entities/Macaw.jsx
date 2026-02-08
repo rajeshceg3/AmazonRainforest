@@ -125,13 +125,13 @@ const Macaw = ({ position = [0, 15, 0] }) => {
 
       {/* Tail */}
       <group ref={tailRef} position={[0, -0.1, -0.4]} rotation={[-0.2, 0, 0]}>
-           {/* Layered Tail Feathers */}
-           <mesh position={[0, 0, -0.5]} rotation={[Math.PI/2, 0, 0]}>
-               <boxGeometry args={[0.2, 1.0, 0.02]} />
+           {/* Layered Tail Feathers - Flattened Capsules */}
+           <mesh position={[0, 0, -0.5]} rotation={[Math.PI/2, 0, 0]} scale={[1, 1, 0.1]}>
+               <capsuleGeometry args={[0.1, 0.8, 4, 8]} />
                {flightFeatherMat}
            </mesh>
-           <mesh position={[0, 0.02, -0.4]} rotation={[Math.PI/2, 0, 0]}>
-               <boxGeometry args={[0.3, 0.6, 0.02]} />
+           <mesh position={[0, 0.02, -0.4]} rotation={[Math.PI/2, 0, 0]} scale={[1, 1, 0.1]}>
+               <capsuleGeometry args={[0.15, 0.3, 4, 8]} />
                <meshStandardMaterial color="#d02020" roughness={0.6} side={THREE.DoubleSide} />
            </mesh>
       </group>
@@ -144,24 +144,25 @@ const Macaw = ({ position = [0, 15, 0] }) => {
                <capsuleGeometry args={[0.15, 0.4, 4, 8]} />
                {redFeather}
            </mesh>
-           {/* Coverts (Yellow) */}
-           <mesh position={[0.5, 0, 0]} rotation={[0, 0, -0.2]}>
-                <boxGeometry args={[0.5, 0.05, 0.3]} />
+           {/* Coverts (Yellow) - Flattened Spheres */}
+           <mesh position={[0.5, 0, 0]} rotation={[0, 0, -0.2]} scale={[0.5, 0.05, 0.3]}>
+                <sphereGeometry args={[0.5, 16, 16]} />
                 {yellowFeather}
            </mesh>
-           {/* Flight (Blue) */}
+           {/* Flight (Blue) - Flattened Capsules */}
            <group position={[0.8, -0.05, 0]}>
                 {/* Feathers fan out */}
-                <mesh position={[0.2, 0, 0.1]} rotation={[0, 0.2, 0]}>
-                    <boxGeometry args={[0.6, 0.02, 0.15]} />
+                <mesh position={[0.2, 0, 0.1]} rotation={[0, 0.2, Math.PI/2]} scale={[1, 1, 0.15]}>
+                    {/* Rotate Z 90 puts Y axis along X. Scale Z (local) is thickness */}
+                    <capsuleGeometry args={[0.08, 0.44, 4, 8]} />
                     {flightFeatherMat}
                 </mesh>
-                <mesh position={[0.2, 0, 0]} rotation={[0, 0.1, 0]}>
-                    <boxGeometry args={[0.7, 0.02, 0.15]} />
+                <mesh position={[0.2, 0, 0]} rotation={[0, 0.1, Math.PI/2]} scale={[1, 1, 0.15]}>
+                    <capsuleGeometry args={[0.08, 0.54, 4, 8]} />
                     {flightFeatherMat}
                 </mesh>
-                <mesh position={[0.2, 0, -0.1]}>
-                    <boxGeometry args={[0.8, 0.02, 0.15]} />
+                <mesh position={[0.2, 0, -0.1]} rotation={[0, 0, Math.PI/2]} scale={[1, 1, 0.15]}>
+                    <capsuleGeometry args={[0.08, 0.64, 4, 8]} />
                     {flightFeatherMat}
                 </mesh>
            </group>
@@ -175,22 +176,22 @@ const Macaw = ({ position = [0, 15, 0] }) => {
                {redFeather}
            </mesh>
            {/* Coverts (Yellow) */}
-           <mesh position={[-0.5, 0, 0]} rotation={[0, 0, 0.2]}>
-                <boxGeometry args={[0.5, 0.05, 0.3]} />
+           <mesh position={[-0.5, 0, 0]} rotation={[0, 0, 0.2]} scale={[0.5, 0.05, 0.3]}>
+                <sphereGeometry args={[0.5, 16, 16]} />
                 {yellowFeather}
            </mesh>
            {/* Flight (Blue) */}
            <group position={[-0.8, -0.05, 0]}>
-                <mesh position={[-0.2, 0, 0.1]} rotation={[0, -0.2, 0]}>
-                    <boxGeometry args={[0.6, 0.02, 0.15]} />
+                <mesh position={[-0.2, 0, 0.1]} rotation={[0, -0.2, -Math.PI/2]} scale={[1, 1, 0.15]}>
+                    <capsuleGeometry args={[0.08, 0.44, 4, 8]} />
                     {flightFeatherMat}
                 </mesh>
-                <mesh position={[-0.2, 0, 0]} rotation={[0, -0.1, 0]}>
-                    <boxGeometry args={[0.7, 0.02, 0.15]} />
+                <mesh position={[-0.2, 0, 0]} rotation={[0, -0.1, -Math.PI/2]} scale={[1, 1, 0.15]}>
+                    <capsuleGeometry args={[0.08, 0.54, 4, 8]} />
                     {flightFeatherMat}
                 </mesh>
-                <mesh position={[-0.2, 0, -0.1]}>
-                    <boxGeometry args={[0.8, 0.02, 0.15]} />
+                <mesh position={[-0.2, 0, -0.1]} rotation={[0, 0, -Math.PI/2]} scale={[1, 1, 0.15]}>
+                    <capsuleGeometry args={[0.08, 0.64, 4, 8]} />
                     {flightFeatherMat}
                 </mesh>
            </group>
