@@ -1,140 +1,201 @@
 import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, extend } from '@react-three/fiber'
 import * as THREE from 'three'
+import FurMaterial from '../shaders/FurMaterial'
+
+extend({ FurMaterial })
 
 const Macaw = ({ position = [0, 15, 0] }) => {
   const group = useRef()
-  const wingL_Arm = useRef()
-  const wingL_Forearm = useRef()
-  const wingR_Arm = useRef()
-  const wingR_Forearm = useRef()
+  const wingL = useRef()
+  const wingR = useRef()
   const tailRef = useRef()
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
 
-    // Flight Path
+    // Flight Path (Figure 8)
     if (group.current) {
-        // Figure 8
         const x = position[0] + Math.sin(t * 0.5) * 12
         const z = position[2] + Math.sin(t) * 6
         const y = position[1] + Math.cos(t * 0.8) * 2
 
+        // Determine velocity for orientation
+        const dx = Math.cos(t * 0.5) * 12 * 0.5
+        const dz = Math.cos(t) * 6
+        const dy = -Math.sin(t * 0.8) * 2 * 0.8
+
         group.current.position.set(x, y, z)
 
-        // Banking and Turning
-        // Look ahead
-        const dx = Math.cos(t * 0.5) * 12 * 0.5 // Derivative of x
-        const dz = Math.cos(t) * 6 // Derivative of z
-        const targetRot = Math.atan2(dx, dz) + Math.PI / 2
+        const targetRot = Math.atan2(dx, dz)
+        group.current.rotation.y = targetRot + Math.PI // Face forward? atan2(x, z) gives angle from Z.
 
-        group.current.rotation.y = targetRot
-        // Bank into turn
+        // Banking
         group.current.rotation.z = -dx * 0.05
-        group.current.rotation.x = Math.sin(t * 0.8) * 0.1 // Pitch
+        group.current.rotation.x = -dy * 0.1 // Pitch
     }
 
-    // Wing Flap - Multi-stage
-    const flap = Math.sin(t * 8)
-    const flapAmp = 0.6
+    // Wing Flap
+    const flap = Math.sin(t * 10)
+    if (wingL.current) {
+        wingL.current.rotation.z = flap * 0.5 + 0.2
+        // Fold wing slightly on upstroke? Simpler to just rotate
+    }
+    if (wingR.current) {
+        wingR.current.rotation.z = -flap * 0.5 - 0.2
+    }
 
-    if (wingL_Arm.current) wingL_Arm.current.rotation.z = flap * flapAmp
-    if (wingR_Arm.current) wingR_Arm.current.rotation.z = -flap * flapAmp
-
-    // Forearms lag slightly
-    const lag = 0.5
-    const flapFore = Math.sin(t * 8 - lag)
-    if (wingL_Forearm.current) wingL_Forearm.current.rotation.z = flapFore * 0.3 + 0.2 // Add base offset
-    if (wingR_Forearm.current) wingR_Forearm.current.rotation.z = -flapFore * 0.3 - 0.2
-
-    // Tail Adjustment
+    // Tail
     if (tailRef.current) {
-        tailRef.current.rotation.y = Math.cos(t * 0.5) * 0.2 // Rudder
-        tailRef.current.rotation.x = 0.2 + Math.sin(t * 8) * 0.1 // Stabilize
+        tailRef.current.rotation.x = 0.2 + Math.sin(t * 10) * 0.1
     }
   })
 
+  const redFeather = (
+      <furMaterial
+        uColor={new THREE.Color("#d02020")}
+        uColorTip={new THREE.Color("#ff4040")}
+        uScale={5.0}
+      />
+  )
+
+  const yellowFeather = (
+       <furMaterial
+        uColor={new THREE.Color("#e6d412")}
+        uColorTip={new THREE.Color("#ffff00")}
+        uScale={5.0}
+      />
+  )
+
+  const flightFeatherMat = (
+      <meshStandardMaterial color="#1e3d9e" roughness={0.6} side={THREE.DoubleSide} />
+  )
+
   return (
     <group ref={group} position={position}>
-      {/* Body Group */}
-      <group rotation={[0, 0, 0]}>
-          {/* Main Body */}
-          <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-             <capsuleGeometry args={[0.3, 0.8, 4, 16]} />
-             <meshStandardMaterial color="#c91818" /> {/* Scarlet Macaw Red */}
-          </mesh>
+      {/* Body */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.25, 0.6, 4, 16]} />
+          {redFeather}
+      </mesh>
 
-          {/* Head */}
-          <group position={[0, 0.5, 0.2]} rotation={[0.2, 0, 0]}>
-             <mesh castShadow>
-                 <sphereGeometry args={[0.25, 16, 16]} />
-                 <meshStandardMaterial color="#c91818" />
-             </mesh>
-             {/* Beak */}
-             <mesh position={[0, -0.05, 0.22]} rotation={[0.4, 0, 0]} castShadow>
-                 <coneGeometry args={[0.12, 0.3, 16]} />
-                 <meshStandardMaterial color="#f0f0f0" /> {/* Upper beak white/bone */}
-             </mesh>
-             <mesh position={[0, -0.12, 0.18]} rotation={[-0.2, 0, 0]} castShadow>
-                 <coneGeometry args={[0.08, 0.15, 16]} />
-                 <meshStandardMaterial color="#222" /> {/* Lower beak black */}
-             </mesh>
-             {/* Eyes */}
-             <mesh position={[0.12, 0.05, 0.15]}>
-                 <sphereGeometry args={[0.04, 8, 8]} />
-                 <meshStandardMaterial color="black" />
-             </mesh>
-             <mesh position={[-0.12, 0.05, 0.15]}>
-                 <sphereGeometry args={[0.04, 8, 8]} />
-                 <meshStandardMaterial color="black" />
-             </mesh>
-          </group>
+      {/* Head */}
+      <group position={[0, 0, 0.5]} rotation={[-0.2, 0, 0]}>
+           <mesh castShadow>
+               <sphereGeometry args={[0.22, 16, 16]} />
+               {redFeather}
+           </mesh>
 
-          {/* Tail Feathers */}
-          <group ref={tailRef} position={[0, -0.4, -0.1]} rotation={[0.5, 0, 0]}>
-              <mesh position={[0, -0.6, 0]} castShadow>
-                  <boxGeometry args={[0.3, 1.2, 0.05]} />
-                  <meshStandardMaterial color="#1e3d9e" /> {/* Blue tips */}
-              </mesh>
-          </group>
+           {/* Face Patch (White skin) */}
+           <mesh position={[0, 0.02, 0.18]} rotation={[0.2, 0, 0]}>
+               <sphereGeometry args={[0.18, 16, 16]} />
+               <meshStandardMaterial color="#ffffff" roughness={0.9} />
+           </mesh>
 
-          {/* Left Wing */}
-          <group position={[0.2, 0.2, 0]}>
-             <group ref={wingL_Arm} rotation={[0, 0, 0.2]}>
-                 {/* Arm */}
-                 <mesh position={[0.3, 0, 0]}>
-                     <boxGeometry args={[0.6, 0.1, 0.4]} />
-                     <meshStandardMaterial color="#e6d412" /> {/* Yellow shoulder */}
-                 </mesh>
-                 {/* Forearm */}
-                 <group position={[0.6, 0, 0]} ref={wingL_Forearm}>
-                      <mesh position={[0.5, 0, 0]}>
-                         <boxGeometry args={[1.0, 0.05, 0.5]} />
-                         <meshStandardMaterial color="#1e3d9e" /> {/* Blue feathers */}
-                      </mesh>
-                 </group>
-             </group>
-          </group>
+           {/* Upper Beak (Hooked) */}
+           <group position={[0, 0.05, 0.25]} rotation={[0.5, 0, 0]}>
+               {/* Base of beak */}
+               <mesh>
+                   <coneGeometry args={[0.1, 0.3, 16]} />
+                   <meshStandardMaterial color="#fdfdfd" roughness={0.4} />
+               </mesh>
+               {/* Tip hook (Torus segment or bent cone) */}
+               <mesh position={[0, 0.15, 0.05]} rotation={[-0.5, 0, 0]}>
+                   <coneGeometry args={[0.08, 0.2, 16]} />
+                    <meshStandardMaterial color="#fdfdfd" roughness={0.4} />
+               </mesh>
+           </group>
 
-          {/* Right Wing */}
-          <group position={[-0.2, 0.2, 0]}>
-             <group ref={wingR_Arm} rotation={[0, 0, -0.2]}>
-                 {/* Arm */}
-                 <mesh position={[-0.3, 0, 0]}>
-                     <boxGeometry args={[0.6, 0.1, 0.4]} />
-                     <meshStandardMaterial color="#e6d412" />
-                 </mesh>
-                 {/* Forearm */}
-                 <group position={[-0.6, 0, 0]} ref={wingR_Forearm}>
-                      <mesh position={[-0.5, 0, 0]}>
-                         <boxGeometry args={[1.0, 0.05, 0.5]} />
-                         <meshStandardMaterial color="#1e3d9e" />
-                      </mesh>
-                 </group>
-             </group>
-          </group>
+           {/* Lower Beak */}
+           <mesh position={[0, -0.08, 0.25]} rotation={[-0.2, 0, 0]}>
+               <coneGeometry args={[0.08, 0.15, 16]} />
+               <meshStandardMaterial color="#111" roughness={0.4} />
+           </mesh>
 
+           {/* Eyes */}
+           <mesh position={[0.12, 0.05, 0.2]}>
+               <sphereGeometry args={[0.03, 8, 8]} />
+               <meshStandardMaterial color="#111" />
+           </mesh>
+           <mesh position={[-0.12, 0.05, 0.2]}>
+               <sphereGeometry args={[0.03, 8, 8]} />
+               <meshStandardMaterial color="#111" />
+           </mesh>
       </group>
+
+      {/* Tail */}
+      <group ref={tailRef} position={[0, -0.1, -0.4]} rotation={[-0.2, 0, 0]}>
+           {/* Layered Tail Feathers */}
+           <mesh position={[0, 0, -0.5]} rotation={[Math.PI/2, 0, 0]}>
+               <boxGeometry args={[0.2, 1.0, 0.02]} />
+               {flightFeatherMat}
+           </mesh>
+           <mesh position={[0, 0.02, -0.4]} rotation={[Math.PI/2, 0, 0]}>
+               <boxGeometry args={[0.3, 0.6, 0.02]} />
+               <meshStandardMaterial color="#d02020" roughness={0.6} side={THREE.DoubleSide} />
+           </mesh>
+      </group>
+
+      {/* Wings */}
+      {/* Left */}
+      <group position={[0.2, 0.1, 0.1]} ref={wingL}>
+           {/* Shoulder (Red) */}
+           <mesh position={[0.2, 0, 0]} rotation={[0, 0, -0.2]}>
+               <capsuleGeometry args={[0.15, 0.4, 4, 8]} />
+               {redFeather}
+           </mesh>
+           {/* Coverts (Yellow) */}
+           <mesh position={[0.5, 0, 0]} rotation={[0, 0, -0.2]}>
+                <boxGeometry args={[0.5, 0.05, 0.3]} />
+                {yellowFeather}
+           </mesh>
+           {/* Flight (Blue) */}
+           <group position={[0.8, -0.05, 0]}>
+                {/* Feathers fan out */}
+                <mesh position={[0.2, 0, 0.1]} rotation={[0, 0.2, 0]}>
+                    <boxGeometry args={[0.6, 0.02, 0.15]} />
+                    {flightFeatherMat}
+                </mesh>
+                <mesh position={[0.2, 0, 0]} rotation={[0, 0.1, 0]}>
+                    <boxGeometry args={[0.7, 0.02, 0.15]} />
+                    {flightFeatherMat}
+                </mesh>
+                <mesh position={[0.2, 0, -0.1]}>
+                    <boxGeometry args={[0.8, 0.02, 0.15]} />
+                    {flightFeatherMat}
+                </mesh>
+           </group>
+      </group>
+
+      {/* Right */}
+      <group position={[-0.2, 0.1, 0.1]} ref={wingR}>
+           {/* Shoulder (Red) */}
+           <mesh position={[-0.2, 0, 0]} rotation={[0, 0, 0.2]}>
+               <capsuleGeometry args={[0.15, 0.4, 4, 8]} />
+               {redFeather}
+           </mesh>
+           {/* Coverts (Yellow) */}
+           <mesh position={[-0.5, 0, 0]} rotation={[0, 0, 0.2]}>
+                <boxGeometry args={[0.5, 0.05, 0.3]} />
+                {yellowFeather}
+           </mesh>
+           {/* Flight (Blue) */}
+           <group position={[-0.8, -0.05, 0]}>
+                <mesh position={[-0.2, 0, 0.1]} rotation={[0, -0.2, 0]}>
+                    <boxGeometry args={[0.6, 0.02, 0.15]} />
+                    {flightFeatherMat}
+                </mesh>
+                <mesh position={[-0.2, 0, 0]} rotation={[0, -0.1, 0]}>
+                    <boxGeometry args={[0.7, 0.02, 0.15]} />
+                    {flightFeatherMat}
+                </mesh>
+                <mesh position={[-0.2, 0, -0.1]}>
+                    <boxGeometry args={[0.8, 0.02, 0.15]} />
+                    {flightFeatherMat}
+                </mesh>
+           </group>
+      </group>
+
     </group>
   )
 }
