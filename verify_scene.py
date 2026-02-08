@@ -7,6 +7,14 @@ def run():
         page = browser.new_page()
         page.goto("http://localhost:5173")
 
+        # Wait for button to be present and click it
+        try:
+            page.wait_for_selector("button", timeout=5000)
+            page.click("button")
+            print("Start button clicked")
+        except:
+            print("Start button not found or timed out")
+
         # Wait for canvas to be present
         page.wait_for_selector("canvas", timeout=10000)
 
