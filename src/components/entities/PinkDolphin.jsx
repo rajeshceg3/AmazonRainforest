@@ -81,11 +81,6 @@ const PinkDolphin = ({ position = [0, -2, 0] }) => {
 
                   {/* Flukes (Tail Fin) */}
                   <group position={[0, 0, -1.1]} ref={tailFinRef}>
-                      <mesh rotation={[-0.2, 0, 0]} scale={[1, 0.1, 0.5]}>
-                          <boxGeometry args={[1.2, 0.2, 0.8]} />
-                          {/* Use Box for now, maybe rounded box? */}
-                           {skinMaterial}
-                      </mesh>
                       {/* Better Flukes: Two flattened spheres */}
                       <group position={[0, 0, 0]}>
                            <mesh position={[0.3, 0, 0]} rotation={[0, 0, -0.2]} scale={[1, 0.1, 0.6]}>
