@@ -1,9 +1,19 @@
+/* eslint-disable react-hooks/immutability */
 import { MeshReflectorMaterial } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import { useWaterNormals } from '../../utils/WaterNormals'
+import { useMemo } from 'react'
 import * as THREE from 'three'
 
 const River = () => {
-  const normalMap = useWaterNormals(512)
+  const baseNormalMap = useWaterNormals(512)
+  const normalMap = useMemo(() => baseNormalMap.clone(), [baseNormalMap])
+
+  useFrame((state, delta) => {
+    // Animate texture offset for flow
+    normalMap.offset.x += delta * 0.05
+    normalMap.offset.y += delta * 0.02
+  })
 
   return (
     <group position={[0, -0.5, 0]}>

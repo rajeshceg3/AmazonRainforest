@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo } from 'react'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 import { LeafMaterial } from '../shaders/LeafMaterial'
@@ -27,7 +27,7 @@ const useFernGeometry = () => {
         // Taper width: wider at 0.2, zero at 1.0
         // Base width (y=0) is 0.3.
         // Let's make it oval-ish.
-        const widthScale = Math.sin(Math.acos(Math.abs(yNorm * 2 - 1))) // Circular profile?
+        // const widthScale = Math.sin(Math.acos(Math.abs(yNorm * 2 - 1))) // Circular profile?
         // Or simple taper:
         const taper = 1.0 - Math.pow(yNorm, 1.5)
         v.x *= taper
