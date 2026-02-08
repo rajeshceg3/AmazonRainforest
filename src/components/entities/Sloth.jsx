@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { useFrame, extend } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import FurMaterial from '../shaders/FurMaterial'
 
@@ -70,25 +69,27 @@ const Sloth = ({ position = [0, 10, 0] }) => {
            {furMaterial}
         </mesh>
 
-        {/* Face Mask */}
+        {/* Face Mask - Organic Shape */}
         <group position={[0, 0.05, 0.25]} rotation={[-0.2, 0, 0]}>
-             <RoundedBox args={[0.35, 0.28, 0.1]} radius={0.05} smoothness={4} castShadow>
+             {/* Flattened Sphere for face mask */}
+             <mesh castShadow scale={[1.1, 0.9, 0.3]} position={[0, 0, 0]}>
+                <sphereGeometry args={[0.25, 32, 32]} />
                 <meshStandardMaterial color="#e0d6c8" roughness={0.9} />
-             </RoundedBox>
+             </mesh>
 
              {/* Eyes */}
-             <group position={[0, 0.02, 0.06]}>
+             <group position={[0, 0.02, 0.08]}>
                  <mesh position={[0.08, 0, 0]}>
-                     <sphereGeometry args={[0.03, 8, 8]} />
+                     <sphereGeometry args={[0.035, 16, 16]} />
                      <meshStandardMaterial color="#111" roughness={0.2} />
                  </mesh>
                  <mesh position={[-0.08, 0, 0]}>
-                     <sphereGeometry args={[0.03, 8, 8]} />
+                     <sphereGeometry args={[0.035, 16, 16]} />
                      <meshStandardMaterial color="#111" roughness={0.2} />
                  </mesh>
                  {/* Nose */}
-                 <mesh position={[0, -0.06, 0.02]}>
-                     <sphereGeometry args={[0.05, 8, 8]} />
+                 <mesh position={[0, -0.06, 0.04]}>
+                     <sphereGeometry args={[0.06, 16, 16]} />
                      <meshStandardMaterial color="#222" roughness={0.5} />
                  </mesh>
              </group>

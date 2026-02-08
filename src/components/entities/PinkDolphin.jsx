@@ -54,41 +54,47 @@ const PinkDolphin = ({ position = [0, -2, 0] }) => {
     <group ref={group} position={position}>
         {/* Torso Group */}
         <group ref={torsoRef}>
-             {/* Main Body Cylinder */}
+             {/* Main Body - Capsule for organic shape */}
              <mesh rotation={[Math.PI/2, 0, 0]} castShadow>
-                 <cylinderGeometry args={[0.35, 0.4, 1.4, 16]} />
+                 {/* Radius 0.38, Length 1.5 */}
+                 <capsuleGeometry args={[0.38, 1.5, 8, 16]} />
                  {skinMaterial}
              </mesh>
 
-             {/* Dorsal Ridge (Hump) */}
-             <mesh position={[0, 0.35, 0]} rotation={[0, 0, 0]}>
-                 <capsuleGeometry args={[0.1, 0.8, 4, 8]} />
-                 {/* Rotate capsule to lie flat along spine */}
-                 {/* Capsule is Y-aligned. Rotate X 90. */}
-             </mesh>
-             {/* Better Hump: Scaled Sphere */}
-             <mesh position={[0, 0.25, 0]} scale={[0.5, 0.5, 2.0]}>
-                 <sphereGeometry args={[0.3, 16, 16]} />
+             {/* Dorsal Ridge (Hump) - Blended better */}
+             <mesh position={[0, 0.3, -0.2]} rotation={[0.2, 0, 0]} scale={[0.4, 0.4, 1.5]}>
+                 <sphereGeometry args={[0.5, 16, 16]} />
                  {skinMaterial}
              </mesh>
 
              {/* Tail Section */}
-             <group position={[0, 0, -0.7]} ref={tailBaseRef}>
-                  <mesh rotation={[Math.PI/2, 0, 0]} position={[0, 0, -0.5]} castShadow>
-                      <cylinderGeometry args={[0.35, 0.1, 1.2, 16]} />
+             <group position={[0, 0.1, -0.9]} ref={tailBaseRef}>
+                  {/* Tail Stock - Tapered using Cone or scaled Capsule */}
+                  <mesh rotation={[Math.PI/2, 0, 0]} position={[0, 0, -0.6]} castShadow>
+                      <coneGeometry args={[0.25, 1.4, 32]} />
+                      {skinMaterial}
+                  </mesh>
+                  {/* Smoothing the joint with a sphere */}
+                  <mesh position={[0, 0, -0.1]}>
+                      <sphereGeometry args={[0.3, 16, 16]} />
                       {skinMaterial}
                   </mesh>
 
                   {/* Flukes (Tail Fin) */}
-                  <group position={[0, 0, -1.1]} ref={tailFinRef}>
-                      {/* Better Flukes: Two flattened spheres */}
+                  <group position={[0, 0, -1.3]} ref={tailFinRef} rotation={[-0.2, 0, 0]}>
+                      {/* Better Flukes: Two flattened spheres with curve */}
                       <group position={[0, 0, 0]}>
-                           <mesh position={[0.3, 0, 0]} rotation={[0, 0, -0.2]} scale={[1, 0.1, 0.6]}>
-                               <sphereGeometry args={[0.4, 16, 16]} />
+                           <mesh position={[0.4, 0, 0]} rotation={[0.2, 0, -0.3]} scale={[1.2, 0.1, 0.7]}>
+                               <sphereGeometry args={[0.35, 32, 32]} />
                                {skinMaterial}
                            </mesh>
-                           <mesh position={[-0.3, 0, 0]} rotation={[0, 0, 0.2]} scale={[1, 0.1, 0.6]}>
-                               <sphereGeometry args={[0.4, 16, 16]} />
+                           <mesh position={[-0.4, 0, 0]} rotation={[0.2, 0, 0.3]} scale={[1.2, 0.1, 0.7]}>
+                               <sphereGeometry args={[0.35, 32, 32]} />
+                               {skinMaterial}
+                           </mesh>
+                           {/* Center blend */}
+                           <mesh position={[0, 0, 0]} scale={[0.5, 0.1, 0.5]}>
+                               <sphereGeometry args={[0.3, 16, 16]} />
                                {skinMaterial}
                            </mesh>
                       </group>
@@ -96,45 +102,51 @@ const PinkDolphin = ({ position = [0, -2, 0] }) => {
              </group>
 
              {/* Pectoral Fins attached to Torso */}
-             <group position={[0.35, -0.2, 0.3]} rotation={[0, 0.5, 0.5]} ref={finL}>
-                 <mesh scale={[0.8, 0.1, 0.4]} position={[0.4, 0, 0]}>
-                     <sphereGeometry args={[0.5, 16, 16]} />
+             <group position={[0.35, -0.15, 0.4]} rotation={[0, 0.5, 0.5]} ref={finL}>
+                 <mesh scale={[1.0, 0.15, 0.5]} position={[0.4, 0, 0]}>
+                     <sphereGeometry args={[0.4, 32, 32]} />
                      {skinMaterial}
                  </mesh>
              </group>
-             <group position={[-0.35, -0.2, 0.3]} rotation={[0, -0.5, -0.5]} ref={finR}>
-                 <mesh scale={[0.8, 0.1, 0.4]} position={[-0.4, 0, 0]}>
-                     <sphereGeometry args={[0.5, 16, 16]} />
+             <group position={[-0.35, -0.15, 0.4]} rotation={[0, -0.5, -0.5]} ref={finR}>
+                 <mesh scale={[1.0, 0.15, 0.5]} position={[-0.4, 0, 0]}>
+                     <sphereGeometry args={[0.4, 32, 32]} />
                      {skinMaterial}
                  </mesh>
              </group>
         </group>
 
         {/* Head Group */}
-        <group position={[0, 0, 0.7]} ref={headRef}>
-             {/* Cranium */}
-             <mesh castShadow>
-                 <sphereGeometry args={[0.35, 16, 16]} />
+        <group position={[0, -0.05, 0.8]} ref={headRef}>
+             {/* Cranium - Smooth blend */}
+             <mesh castShadow position={[0, 0, -0.1]}>
+                 <sphereGeometry args={[0.36, 32, 32]} />
                  {skinMaterial}
              </mesh>
              {/* Melon (Bulbous forehead) */}
-             <mesh position={[0, 0.15, 0.1]} castShadow>
-                 <sphereGeometry args={[0.28, 16, 16]} />
+             <mesh position={[0, 0.18, 0.15]} castShadow scale={[0.9, 1, 1.1]}>
+                 <sphereGeometry args={[0.3, 32, 32]} />
                  {skinMaterial}
              </mesh>
-             {/* Snout (Long beak) */}
-             <mesh position={[0, -0.1, 0.5]} rotation={[Math.PI/2, 0, 0]} castShadow>
-                 <cylinderGeometry args={[0.05, 0.08, 0.7, 12]} />
+             {/* Snout (Long beak) - Tapered Capsule/Cylinder blend */}
+             <mesh position={[0, -0.05, 0.6]} rotation={[Math.PI/2, 0, 0]} castShadow>
+                 {/* Using Cone for taper */}
+                 <coneGeometry args={[0.06, 0.8, 32]} />
+                 {skinMaterial}
+             </mesh>
+             {/* Snout tip rounded */}
+             <mesh position={[0, -0.05, 1.0]}>
+                 <sphereGeometry args={[0.03, 16, 16]} />
                  {skinMaterial}
              </mesh>
 
              {/* Eyes */}
              <mesh position={[0.22, -0.05, 0.15]}>
-                 <sphereGeometry args={[0.02, 8, 8]} />
+                 <sphereGeometry args={[0.025, 16, 16]} />
                  <meshStandardMaterial color="#111" roughness={0.0} />
              </mesh>
               <mesh position={[-0.22, -0.05, 0.15]}>
-                 <sphereGeometry args={[0.02, 8, 8]} />
+                 <sphereGeometry args={[0.025, 16, 16]} />
                  <meshStandardMaterial color="#111" roughness={0.0} />
              </mesh>
         </group>
