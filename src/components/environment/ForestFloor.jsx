@@ -133,8 +133,8 @@ const useGrassGeometry = () => {
 }
 
 const ForestFloor = () => {
-  const fernCount = 800
-  const grassCount = 8000
+  const fernCount = 2000
+  const grassCount = 30000
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()

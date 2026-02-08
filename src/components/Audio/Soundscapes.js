@@ -5,16 +5,21 @@ import * as THREE from 'three'
 // Deep rumble + rushing water + occasional splashes
 class RiverLayer {
   constructor(outputNode) {
-    this.output = outputNode
+    // 0. Spatial Panner (Stereo Panner with LFO for width/movement)
+    // Since we don't have full X/Z coordinates passed easily, we simulate flow "around"
+    this.panner = new Tone.Panner(0).connect(outputNode)
+
+    // LFO to slowly pan the river sound left/right to simulate flow direction/immersion
+    this.panLFO = new Tone.LFO(0.1, -0.3, 0.3).connect(this.panner.pan).start()
 
     // 1. Low Rumble (Brown Noise)
-    this.rumbleFilter = new Tone.Filter(300, "lowpass").connect(this.output)
+    this.rumbleFilter = new Tone.Filter(300, "lowpass").connect(this.panner)
     this.rumble = new Tone.Noise("brown").connect(this.rumbleFilter)
     this.rumble.volume.value = -60
 
     // 2. Rushing Water (White Noise + Filter)
     // Dynamic filter to simulate water movement
-    this.rushFilter = new Tone.Filter(800, "lowpass").connect(this.output)
+    this.rushFilter = new Tone.Filter(800, "lowpass").connect(this.panner)
     this.rushNoise = new Tone.Noise("pink").connect(this.rushFilter)
     this.rushNoise.volume.value = -60
 
@@ -29,7 +34,7 @@ class RiverLayer {
       modulationIndex: 32,
       resonance: 4000,
       octaves: 1.5
-    }).connect(this.output)
+    }).connect(this.panner)
     this.splashSynth.volume.value = -15
 
     this.rumble.start()
@@ -63,6 +68,8 @@ class RiverLayer {
     this.rushNoise.dispose()
     this.rushFilter.dispose()
     this.rushLFO.dispose()
+    this.panLFO.dispose()
+    this.panner.dispose()
     this.splashSynth.dispose()
   }
 }
@@ -71,7 +78,9 @@ class RiverLayer {
 // Wind (Pink Noise + AutoFilter) + "Air" presence
 class CanopyLayer {
   constructor(outputNode) {
-    this.output = outputNode
+    // Stereo Panner for wind movement
+    this.panner = new Tone.Panner(0).connect(outputNode)
+    this.panLFO = new Tone.LFO(0.05, -0.5, 0.5).connect(this.panner.pan).start() // Slow swirl
 
     // 1. Wind Gusts
     // AutoFilter creates a sweeping effect
@@ -81,14 +90,14 @@ class CanopyLayer {
       octaves: 4,
       type: "sine",
       depth: 0.8
-    }).connect(this.output).start()
+    }).connect(this.panner).start()
 
     this.windNoise = new Tone.Noise("pink").connect(this.windFilter)
     this.windNoise.volume.value = -60
     this.windNoise.start()
 
     // 2. High Air (Hiss)
-    this.airFilter = new Tone.Filter(4000, "highpass").connect(this.output)
+    this.airFilter = new Tone.Filter(4000, "highpass").connect(this.panner)
     this.airNoise = new Tone.Noise("white").connect(this.airFilter)
     this.airNoise.volume.value = -60
     this.airNoise.start()
@@ -112,6 +121,8 @@ class CanopyLayer {
     this.windFilter.dispose()
     this.airNoise.dispose()
     this.airFilter.dispose()
+    this.panLFO.dispose()
+    this.panner.dispose()
   }
 }
 
@@ -230,6 +241,55 @@ class CreatureManager {
   }
 }
 
+// --- Ambience Layer ---
+// Subtle musical pads for relaxation and "magical" feel
+class AmbienceLayer {
+    constructor(outputNode) {
+        this.output = outputNode
+
+        // PolySynth for chords
+        this.synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 2, decay: 3, sustain: 0.8, release: 4 }
+        })
+
+        this.synth.volume.value = -30 // Very subtle
+
+        this.filter = new Tone.Filter(800, "lowpass").connect(this.output)
+        this.synth.connect(this.filter)
+
+        this.lastChordTime = 0
+
+        // C Major 7 / A Minor 7 / F Major 7 / G Major
+        this.chords = [
+            ["C4", "E4", "G4", "B4"],
+            ["A3", "C4", "E4", "G4"],
+            ["F3", "A3", "C4", "E4"],
+            ["G3", "B3", "D4", "F4"]
+        ]
+        this.currentChord = 0
+    }
+
+    update(y, time) {
+        // Trigger a new chord every ~10-15 seconds
+        if (time - this.lastChordTime > 12) {
+             this.synth.triggerAttackRelease(this.chords[this.currentChord], "4m", time)
+             this.currentChord = (this.currentChord + 1) % this.chords.length
+             this.lastChordTime = time
+        }
+
+        // Modulate volume based on height (subtle change)
+        // Maybe louder in the canopy (heavenly)
+        // const vol = THREE.MathUtils.mapLinear(y, 0, 30, -35, -25)
+        // this.synth.volume.rampTo(vol, 1)
+    }
+
+    dispose() {
+        this.synth.dispose()
+        this.filter.dispose()
+    }
+}
+
 // --- Main Manager ---
 export class SoundscapeManager {
   constructor() {
@@ -252,6 +312,7 @@ export class SoundscapeManager {
     this.canopy = new CanopyLayer(this.reverb)
     this.rain = new RainLayer(this.reverb)
     this.creatures = new CreatureManager(this.reverb)
+    this.ambience = new AmbienceLayer(this.reverb)
 
     // Transport helps with timing if needed, but we rely on update(time) mostly
     Tone.Transport.start()
@@ -264,6 +325,7 @@ export class SoundscapeManager {
     this.canopy.update(y, time)
     this.rain.update(y, time)
     this.creatures.update(y, time)
+    this.ambience.update(y, time)
 
     // Adjust Reverb Mix based on location?
     // More reverb in canopy (open), less in understory (dense)?
@@ -278,6 +340,7 @@ export class SoundscapeManager {
     this.canopy.dispose()
     this.rain.dispose()
     this.creatures.dispose()
+    this.ambience.dispose()
     this.reverb.dispose()
     this.limiter.dispose()
     Tone.Transport.stop()
