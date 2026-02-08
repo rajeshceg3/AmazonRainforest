@@ -101,15 +101,10 @@ const CameraController = () => {
   }, [])
 
   useFrame((state) => {
-    const time = state.clock.getElapsedTime()
-
     // Smooth interpolation
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, cameraX.current, 0.05)
     state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, cameraY.current, 0.05)
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, cameraZ.current, 0.05)
-
-    // Add subtle drift for life-like movement, but much smaller than before since user has control
-    const drift = Math.sin(time * 0.5) * 0.5
 
     // Look at target logic
     // We want to look slightly ahead in the direction of "forward" (usually -Z in Three.js, but here Z changes)

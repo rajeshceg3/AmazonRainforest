@@ -1,9 +1,7 @@
 import { useRef } from 'react'
-import { useFrame, extend } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import FurMaterial from '../shaders/FurMaterial'
-
-extend({ FurMaterial })
+import { FurMaterial } from '../shaders/FurMaterial'
 
 const Macaw = ({ position = [0, 15, 0] }) => {
   const group = useRef()
@@ -52,7 +50,7 @@ const Macaw = ({ position = [0, 15, 0] }) => {
   })
 
   const redFeather = (
-      <furMaterial
+      <FurMaterial
         uColor={new THREE.Color("#d02020")}
         uColorTip={new THREE.Color("#ff4040")}
         uScale={5.0}
@@ -60,7 +58,7 @@ const Macaw = ({ position = [0, 15, 0] }) => {
   )
 
   const yellowFeather = (
-       <furMaterial
+       <FurMaterial
         uColor={new THREE.Color("#e6d412")}
         uColorTip={new THREE.Color("#ffff00")}
         uScale={5.0}

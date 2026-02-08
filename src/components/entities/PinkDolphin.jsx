@@ -1,9 +1,7 @@
 import { useRef } from 'react'
-import { useFrame, extend } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import DolphinSkinMaterial from '../shaders/DolphinSkinMaterial'
-
-extend({ DolphinSkinMaterial })
+import { DolphinSkinMaterial } from '../shaders/DolphinSkinMaterial'
 
 const PinkDolphin = ({ position = [0, -2, 0] }) => {
   const group = useRef()
@@ -43,7 +41,7 @@ const PinkDolphin = ({ position = [0, -2, 0] }) => {
   })
 
   const skinMaterial = (
-      <dolphinSkinMaterial
+      <DolphinSkinMaterial
         uColorBase={new THREE.Color("#eecbcb")}
         uColorPatch={new THREE.Color("#998888")}
         uScale={3.0}
