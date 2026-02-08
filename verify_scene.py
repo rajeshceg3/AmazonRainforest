@@ -5,6 +5,11 @@ def run():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
+
+        # Capture console messages
+        page.on("console", lambda msg: print(f"Console: {msg.text}"))
+        page.on("pageerror", lambda exc: print(f"Page Error: {exc}"))
+
         page.goto("http://localhost:5173")
 
         # Wait for button to be present and click it

@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
+import { extend } from '@react-three/fiber'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
+import BarkMaterial from '../shaders/BarkMaterial'
+
+extend({ BarkMaterial })
 
 const TreeConfig = {
   count: 40,
@@ -22,8 +26,40 @@ const WobblyTrunkGeometry = () => {
     }, [])
 }
 
+const LeafGeometry = () => {
+    return useMemo(() => {
+        // Cross planes for volume
+        const geo = new THREE.BufferGeometry()
+        const scale = 1.0
+
+        // Plane 1
+        const v1 = [
+            -scale, -scale, 0,
+             scale, -scale, 0,
+             scale,  scale, 0,
+            -scale, -scale, 0,
+             scale,  scale, 0,
+            -scale,  scale, 0
+        ]
+        // Plane 2 (Rotated 90 deg Y)
+        const v2 = [
+            0, -scale, -scale,
+            0, -scale,  scale,
+            0,  scale,  scale,
+            0, -scale, -scale,
+            0,  scale,  scale,
+            0,  scale, -scale
+        ]
+        const vertices = [...v1, ...v2]
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+        geo.computeVertexNormals()
+        return geo
+    }, [])
+}
+
 const Canopy = () => {
   const trunkGeo = WobblyTrunkGeometry()
+  const leafGeo = LeafGeometry()
 
   const { trunks, leaves } = useMemo(() => {
     const trunks = []
@@ -84,16 +120,15 @@ const Canopy = () => {
     <group>
       {/* Trunks */}
       <Instances range={trunks.length} geometry={trunkGeo} castShadow receiveShadow>
-        <meshStandardMaterial color="#3d2817" roughness={0.9} />
+        <barkMaterial uScale={4.0} uColor={new THREE.Color("#3d2817")} />
         {trunks.map((data, i) => (
           <Instance key={`trunk-${i}`} position={data.position} scale={data.scale} rotation={data.rotation} />
         ))}
       </Instances>
 
       {/* Leaves */}
-      <Instances range={leaves.length} castShadow receiveShadow>
-        <planeGeometry args={[1.5, 1.5]} />
-        <meshStandardMaterial side={THREE.DoubleSide} transparent opacity={0.95} />
+      <Instances range={leaves.length} geometry={leafGeo} castShadow receiveShadow>
+        <meshStandardMaterial side={THREE.DoubleSide} transparent opacity={0.95} alphaTest={0.5} />
         {leaves.map((data, i) => (
           <Instance
             key={`leaf-${i}`}

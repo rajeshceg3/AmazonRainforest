@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment } from '@react-three/drei'
+import { ContactShadows, Environment, Sparkles } from '@react-three/drei'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
@@ -21,20 +21,28 @@ const Scene = ({ audioStarted }) => {
       camera={{ position: [0, 2, 10], fov: 45 }}
       style={{ background: '#051605' }} // Deep forest dark green
     >
-      {/* Fog for depth and atmosphere - slightly increased range */}
-      <fog attach="fog" args={['#051605', 5, 45]} />
+      {/* Fog for depth and atmosphere - slightly increased range and lighter green for mist */}
+      <fog attach="fog" args={['#081808', 8, 60]} />
 
       <AudioController started={audioStarted} />
 
-      <ambientLight intensity={0.2} color="#cce0cc" />
+      {/* Natural Ambient Light (Sky + Ground bounce) */}
+      <hemisphereLight intensity={0.4} groundColor="#2e1e0f" color="#dceef2" />
+
+      {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
-        position={[10, 20, 5]}
-        intensity={1.2}
-        color="#fff0dd" // Warm sunlight
+        position={[20, 50, 15]}
+        intensity={2.0}
+        color="#fff5e6" // Warm sunlight
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0001}
-      />
+        shadow-bias={-0.0005}
+      >
+        <orthographicCamera attach="shadow-camera" args={[-50, 50, 50, -50, 0.1, 200]} />
+      </directionalLight>
+
+      {/* Floating Particles (Pollen/Spores) */}
+      <Sparkles count={800} scale={[50, 50, 50]} size={3} speed={0.3} opacity={0.4} color="#ccffcc" />
 
       <CameraController />
 
@@ -47,7 +55,7 @@ const Scene = ({ audioStarted }) => {
       <Fireflies count={100} />
 
       {/* Fauna */}
-      {/* Moved Jaguar slightly closer to camera focus but still grounded */}
+      {/* Moved Jaguar closer and grounded */}
       <Jaguar position={[1, 0, -4]} />
       <PinkDolphin position={[0, -2, 0]} />
       <Sloth position={[5, 12, 5]} />
@@ -62,7 +70,7 @@ const Scene = ({ audioStarted }) => {
       {/* Soft contact shadows for grounding objects */}
       <ContactShadows
         opacity={0.6}
-        scale={40}
+        scale={60}
         blur={2}
         far={2.0}
         resolution={512}
