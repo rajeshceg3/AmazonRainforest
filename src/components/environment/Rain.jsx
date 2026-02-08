@@ -11,46 +11,72 @@ const Rain = ({ count = 4000 }) => {
         uTime: { value: 0 },
         uColor: { value: new THREE.Color('#aaccff') },
         uHeight: { value: 25.0 }, // Rain falls from 25
-        uSpeed: { value: 12.0 }
+        uSpeed: { value: 20.0 }
       },
       vertexShader: `
         uniform float uTime;
         uniform float uHeight;
         uniform float uSpeed;
 
-        attribute float aRandom; // Per-instance random speed factor
+        attribute float aRandom;
 
         varying float vAlpha;
 
+        // Rotation matrix around Y axis
+        mat3 rotateY(float angle) {
+            float s = sin(angle);
+            float c = cos(angle);
+            return mat3(
+                c, 0.0, s,
+                0.0, 1.0, 0.0,
+                -s, 0.0, c
+            );
+        }
+
         void main() {
-          // Decompose matrix
+          // Decompose matrix to get initial position
           mat4 instMat = instanceMatrix;
-          vec3 instTrans = instMat[3].xyz;
-          mat3 instRot = mat3(instMat); // Upper 3x3 is rotation/scale
+          vec3 instPos = instMat[3].xyz;
 
           // Animate Y translation
           float speed = uSpeed + aRandom * 5.0;
+          float yOffset = uTime * speed;
 
-          // Original Y from matrix acts as offset
-          // We subtract time * speed
-          float y = instTrans.y - uTime * speed;
+          // Calculate current Y in world space (relative to initial pos)
+          // We assume initial positions are scattered in Y from 0 to 25
+          float currentY = instPos.y - yOffset;
 
           // Wrap around uHeight
-          // We want range roughly 0 to 25.
-          float newY = mod(y, uHeight);
+          // range [0, 25]
+          // modulo math: mod(x, y) returns x - y * floor(x/y)
+          float wrappedY = mod(currentY, uHeight);
 
-          // Apply rotation to local vertex position
-          vec3 rotatedPos = instRot * position;
+          // Construct current world position center
+          vec3 center = vec3(instPos.x, wrappedY, instPos.z);
 
-          // Combine: Rotated Position + Translated Position (with animated Y)
-          vec3 worldPos = rotatedPos + vec3(instTrans.x, newY, instTrans.z);
+          // Billboarding: Rotate around Y to face camera
+          vec3 viewVector = cameraPosition - center;
+          float angle = atan(viewVector.x, viewVector.z);
 
-          vec4 mvPosition = viewMatrix * modelMatrix * vec4(worldPos, 1.0);
+          // Apply rotation to local position
+          // We assume plane is facing Z initially (normal is Z)
+          // Actually PlaneGeometry is facing Z (vertices in XY plane).
+          // We want to rotate it so its normal faces camera.
+          // atan(x, z) gives angle from Z axis.
+
+          vec3 localPos = rotateY(angle) * position;
+
+          // Final world position
+          vec3 worldPos = center + localPos;
+
+          vec4 mvPosition = viewMatrix * vec4(worldPos, 1.0);
           gl_Position = projectionMatrix * mvPosition;
 
           // Distance fade for softness
           float dist = length(mvPosition.xyz);
-          vAlpha = smoothstep(35.0, 10.0, dist) * 0.5;
+          // Fade out when close (so it doesn't clip weirdly) and when far
+          float alphaFade = smoothstep(1.0, 5.0, dist) * (1.0 - smoothstep(150.0, 200.0, dist));
+          vAlpha = 0.6 * alphaFade;
         }
       `,
       fragmentShader: `
@@ -85,8 +111,6 @@ const Rain = ({ count = 4000 }) => {
     const dummy = new THREE.Object3D()
     instances.forEach((data, i) => {
       dummy.position.set(data.x, data.y, data.z)
-      // Random rotation around Y so streaks don't all align
-      dummy.rotation.y = Math.random() * Math.PI
       dummy.updateMatrix()
       mesh.current.setMatrixAt(i, dummy.matrix)
     })
@@ -101,9 +125,9 @@ const Rain = ({ count = 4000 }) => {
 
   return (
     <instancedMesh ref={mesh} args={[null, null, count]}>
-      <planeGeometry args={[0.02, 0.8]}>
-        <instancedBufferAttribute attach="attributes-aRandom" args={[randoms, 1]} />
-      </planeGeometry>
+      {/* Thinner and longer streaks for realistic rain */}
+      <planeGeometry args={[0.03, 1.5]} />
+      <instancedBufferAttribute attach="attributes-aRandom" args={[randoms, 1]} />
       <primitive object={material} attach="material" />
     </instancedMesh>
   )

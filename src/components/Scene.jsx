@@ -27,7 +27,7 @@ const Scene = ({ audioStarted }) => {
       <AudioController started={audioStarted} />
 
       {/* Natural Ambient Light (Sky + Ground bounce) */}
-      <hemisphereLight intensity={0.4} groundColor="#2e1e0f" color="#dceef2" />
+      <hemisphereLight intensity={0.6} groundColor="#2e1e0f" color="#dceef2" />
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
