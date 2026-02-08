@@ -1,6 +1,5 @@
-import { useRef } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame, extend } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
 import JaguarFurMaterial from '../shaders/JaguarFurMaterial'
 
@@ -21,6 +20,9 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
   const legFR = useRef()
   const legBL = useRef()
   const legBR = useRef()
+
+  // Reusable geometry
+  const muscleGeo = useMemo(() => new THREE.SphereGeometry(1, 16, 16), [])
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
@@ -68,84 +70,95 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
     <group ref={group} position={position}>
       <group position={[0, 0.7, 0]}> {/* Height offset */}
 
-          {/* BELLY (Center) */}
+          {/* BELLY (Center) - Ellipsoid */}
           <group ref={bellyRef}>
-            <RoundedBox args={[0.5, 0.6, 0.7]} radius={0.25} smoothness={8} castShadow receiveShadow>
+            <mesh geometry={muscleGeo} scale={[0.25, 0.3, 0.35]} castShadow receiveShadow>
                  {furMaterial}
-            </RoundedBox>
+            </mesh>
 
             {/* CHEST (Forward) */}
-            <group position={[0, 0.05, 0.6]} ref={chestRef}>
-                 <RoundedBox args={[0.55, 0.65, 0.6]} radius={0.25} smoothness={8} castShadow receiveShadow>
+            <group position={[0, 0.05, 0.5]} ref={chestRef}>
+                 <mesh geometry={muscleGeo} scale={[0.28, 0.32, 0.35]} castShadow receiveShadow>
                     {furMaterial}
-                 </RoundedBox>
+                 </mesh>
 
                  {/* NECK */}
-                 <group position={[0, 0.2, 0.4]} ref={neckRef} rotation={[0.2, 0, 0]}>
-                    <RoundedBox args={[0.3, 0.3, 0.5]} radius={0.12} smoothness={8} castShadow receiveShadow>
+                 <group position={[0, 0.15, 0.3]} ref={neckRef} rotation={[0.4, 0, 0]}>
+                    <mesh geometry={muscleGeo} scale={[0.15, 0.15, 0.25]} castShadow receiveShadow>
                         {furMaterial}
-                    </RoundedBox>
+                    </mesh>
 
                     {/* HEAD */}
-                    <group position={[0, 0.1, 0.3]} ref={headRef} rotation={[-0.2, 0, 0]}>
-                        <RoundedBox args={[0.35, 0.35, 0.4]} radius={0.16} smoothness={8} castShadow receiveShadow>
+                    <group position={[0, 0.0, 0.25]} ref={headRef} rotation={[-0.4, 0, 0]}>
+                        <mesh geometry={muscleGeo} scale={[0.18, 0.18, 0.2]} castShadow receiveShadow>
                             {furMaterial}
-                        </RoundedBox>
+                        </mesh>
                         {/* Snout */}
-                        <mesh position={[0, -0.05, 0.25]} castShadow receiveShadow>
-                            <boxGeometry args={[0.18, 0.15, 0.2]} />
+                        <mesh position={[0, -0.05, 0.18]} castShadow receiveShadow>
+                            <boxGeometry args={[0.12, 0.1, 0.15]} />
                             <meshStandardMaterial color="#e0ac69" roughness={0.6} />
                         </mesh>
-                        {/* Ears - more rounded */}
-                        <group position={[0.12, 0.2, -0.05]} rotation={[0, 0, -0.2]}>
-                            <RoundedBox args={[0.08, 0.12, 0.05]} radius={0.04} smoothness={4} castShadow receiveShadow>
-                                <meshStandardMaterial color="#d49b5c" />
-                            </RoundedBox>
-                        </group>
-                        <group position={[-0.12, 0.2, -0.05]} rotation={[0, 0, 0.2]}>
-                             <RoundedBox args={[0.08, 0.12, 0.05]} radius={0.04} smoothness={4} castShadow receiveShadow>
-                                <meshStandardMaterial color="#d49b5c" />
-                            </RoundedBox>
-                        </group>
+                        {/* Ears - small spheres */}
+                        <mesh geometry={muscleGeo} scale={[0.05, 0.05, 0.02]} position={[0.1, 0.15, 0.0]} rotation={[0, 0, -0.5]} castShadow receiveShadow>
+                             <meshStandardMaterial color="#d49b5c" />
+                        </mesh>
+                        <mesh geometry={muscleGeo} scale={[0.05, 0.05, 0.02]} position={[-0.1, 0.15, 0.0]} rotation={[0, 0, 0.5]} castShadow receiveShadow>
+                             <meshStandardMaterial color="#d49b5c" />
+                        </mesh>
                     </group>
                  </group>
 
-                 {/* Front Legs */}
-                 <group position={[0.25, -0.2, 0.2]} ref={legFL}>
-                    <RoundedBox args={[0.15, 0.7, 0.15]} radius={0.07} smoothness={8} position={[0, -0.3, 0]} castShadow receiveShadow>
+                 {/* Front Legs - Upper Arm */}
+                 <group position={[0.2, -0.1, 0.15]} ref={legFL}>
+                    <mesh geometry={muscleGeo} scale={[0.08, 0.25, 0.1]} position={[0, -0.15, 0]} castShadow receiveShadow>
                          {furMaterial}
-                    </RoundedBox>
+                    </mesh>
+                    {/* Lower Arm */}
+                     <mesh geometry={muscleGeo} scale={[0.06, 0.2, 0.08]} position={[0, -0.45, 0.05]} rotation={[-0.2, 0, 0]} castShadow receiveShadow>
+                         {furMaterial}
+                    </mesh>
                  </group>
-                 <group position={[-0.25, -0.2, 0.2]} ref={legFR}>
-                    <RoundedBox args={[0.15, 0.7, 0.15]} radius={0.07} smoothness={8} position={[0, -0.3, 0]} castShadow receiveShadow>
+                 <group position={[-0.2, -0.1, 0.15]} ref={legFR}>
+                    <mesh geometry={muscleGeo} scale={[0.08, 0.25, 0.1]} position={[0, -0.15, 0]} castShadow receiveShadow>
                          {furMaterial}
-                    </RoundedBox>
+                    </mesh>
+                     <mesh geometry={muscleGeo} scale={[0.06, 0.2, 0.08]} position={[0, -0.45, 0.05]} rotation={[-0.2, 0, 0]} castShadow receiveShadow>
+                         {furMaterial}
+                    </mesh>
                  </group>
             </group>
 
             {/* HIPS (Back) */}
-            <group position={[0, 0.02, -0.6]} ref={hipsRef}>
-                 <RoundedBox args={[0.52, 0.62, 0.6]} radius={0.25} smoothness={8} castShadow receiveShadow>
+            <group position={[0, 0.02, -0.5]} ref={hipsRef}>
+                 <mesh geometry={muscleGeo} scale={[0.26, 0.31, 0.35]} castShadow receiveShadow>
                     {furMaterial}
-                 </RoundedBox>
+                 </mesh>
 
                  {/* TAIL */}
-                 <group position={[0, 0.2, -0.3]} ref={tailRef} rotation={[-0.4, 0, 0]}>
-                    <RoundedBox args={[0.1, 0.1, 1.2]} radius={0.05} smoothness={8} position={[0, 0, -0.5]} castShadow receiveShadow>
+                 <group position={[0, 0.1, -0.3]} ref={tailRef} rotation={[-0.4, 0, 0]}>
+                     {/* Tail segments using simple cylinder or stretched sphere */}
+                    <mesh geometry={muscleGeo} scale={[0.04, 0.04, 0.6]} position={[0, 0, -0.5]} castShadow receiveShadow>
                         {furMaterial}
-                    </RoundedBox>
+                    </mesh>
                  </group>
 
                  {/* Back Legs */}
-                 <group position={[0.25, -0.2, -0.2]} ref={legBL}>
-                    <RoundedBox args={[0.18, 0.7, 0.18]} radius={0.08} smoothness={8} position={[0, -0.3, 0]} castShadow receiveShadow>
+                 <group position={[0.2, -0.1, -0.1]} ref={legBL}>
+                    <mesh geometry={muscleGeo} scale={[0.1, 0.3, 0.15]} position={[0, -0.15, 0]} rotation={[0.2, 0, 0]} castShadow receiveShadow>
                          {furMaterial}
-                    </RoundedBox>
+                    </mesh>
+                    {/* Lower Leg */}
+                     <mesh geometry={muscleGeo} scale={[0.07, 0.25, 0.08]} position={[0, -0.5, -0.05]} rotation={[-0.4, 0, 0]} castShadow receiveShadow>
+                         {furMaterial}
+                    </mesh>
                  </group>
-                 <group position={[-0.25, -0.2, -0.2]} ref={legBR}>
-                    <RoundedBox args={[0.18, 0.7, 0.18]} radius={0.08} smoothness={8} position={[0, -0.3, 0]} castShadow receiveShadow>
+                 <group position={[-0.2, -0.1, -0.1]} ref={legBR}>
+                    <mesh geometry={muscleGeo} scale={[0.1, 0.3, 0.15]} position={[0, -0.15, 0]} rotation={[0.2, 0, 0]} castShadow receiveShadow>
                          {furMaterial}
-                    </RoundedBox>
+                    </mesh>
+                     <mesh geometry={muscleGeo} scale={[0.07, 0.25, 0.08]} position={[0, -0.5, -0.05]} rotation={[-0.4, 0, 0]} castShadow receiveShadow>
+                         {furMaterial}
+                    </mesh>
                  </group>
             </group>
           </group>
