@@ -97,6 +97,7 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
       ref={materialRef}
       roughness={0.9}
       metalness={0.1}
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )

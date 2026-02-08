@@ -118,6 +118,7 @@ export function FurMaterial({ uColor = new THREE.Color('#8c7b6c'), uColorTip = n
       ref={materialRef}
       roughness={0.8}
       metalness={0.1}
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )

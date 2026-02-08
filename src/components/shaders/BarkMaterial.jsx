@@ -166,6 +166,7 @@ export function BarkMaterial(props) {
       color="#3d2817"
       roughness={0.9}
       metalness={0.1}
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )
