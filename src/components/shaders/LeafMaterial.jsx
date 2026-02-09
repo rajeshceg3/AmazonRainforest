@@ -63,6 +63,7 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }
         uniform float uTime;
         uniform float uWindStrength;
         uniform float uWindSpeed;
+        varying vec3 vInstanceWorldPos;
 
         ${noiseFunc}
       ` + shader.vertexShader
@@ -78,6 +79,8 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }
         #ifdef USE_INSTANCING
           worldPos = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         #endif
+
+        vInstanceWorldPos = worldPos;
 
         // Noise inputs (Use XZ and Time)
         float time = uTime * uWindSpeed;
@@ -105,6 +108,8 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }
 
       // --- Fragment Shader Injection ---
       shader.fragmentShader = `
+        uniform float uTime;
+        varying vec3 vInstanceWorldPos;
         ${noiseFunc}
       ` + shader.fragmentShader
 
@@ -112,6 +117,14 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }
         '#include <color_fragment>',
         `
         #include <color_fragment>
+
+        // Cloud Shadows
+        // Large scale noise moving over time
+        float cloudNoise = leaf_snoise(vInstanceWorldPos.xz * 0.01 + vec2(uTime * 0.05, 0.0));
+        float cloudShadow = smoothstep(0.0, 0.6, cloudNoise); // 0 to 1
+
+        // Darken diffuse color based on shadow
+        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.4, cloudShadow * 0.7);
 
         #ifdef USE_UV
             // Organic variation
