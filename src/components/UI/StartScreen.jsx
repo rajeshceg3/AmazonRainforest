@@ -2,7 +2,11 @@ import * as Tone from 'tone'
 
 const StartScreen = ({ onStart }) => {
   const handleStart = async () => {
-    await Tone.start()
+    try {
+      await Tone.start()
+    } catch (e) {
+      console.warn('Audio failed to start, proceeding anyway:', e)
+    }
     onStart()
   }
 
