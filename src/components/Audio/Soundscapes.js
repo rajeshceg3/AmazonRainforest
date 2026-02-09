@@ -1,61 +1,143 @@
 import * as Tone from 'tone'
 import * as THREE from 'three'
 
+// --- Wind Layer ---
+// Dynamic wind based on height and random gusts
+class WindLayer {
+  constructor(outputNode) {
+    this.output = outputNode
+
+    // Stereo Panner
+    this.panner = new Tone.Panner(0).connect(this.output)
+
+    // Filtered Noise for Wind Texture
+    this.filter = new Tone.AutoFilter({
+      frequency: 0.05, // Slow sweep
+      baseFrequency: 150,
+      octaves: 3,
+      type: "sine",
+      depth: 0.8,
+      filter: {
+        type: "lowpass",
+        rolloff: -12,
+        Q: 1
+      }
+    }).connect(this.panner).start()
+
+    this.noise = new Tone.Noise("pink").connect(this.filter)
+    this.noise.volume.value = -60
+    this.noise.start()
+
+    // Gusts (High shelf boost)
+    this.gustFilter = new Tone.Filter(800, "highpass").connect(this.panner)
+    this.gustNoise = new Tone.Noise("white").connect(this.gustFilter)
+    this.gustNoise.volume.value = -60
+    this.gustNoise.start()
+
+    this.lastGustTime = 0
+  }
+
+  update(pos, time) {
+    // Volume increases with height (0 to 40)
+    const baseVol = THREE.MathUtils.mapLinear(pos.y, 0, 40, -50, -20)
+
+    // Smooth volume transition
+    this.noise.volume.rampTo(baseVol, 1.0)
+
+    // Panning based on X position relative to "center" of wind flow?
+    // Wind usually covers everything, but let's pan slightly
+    const pan = THREE.MathUtils.clamp(pos.x / 100, -0.5, 0.5)
+    this.panner.pan.rampTo(pan, 0.1)
+
+    // Gusts
+    if (time - this.lastGustTime > 10 + Math.random() * 10) {
+        if (Math.random() > 0.5) {
+            // Gust duration
+            const dur = 2 + Math.random() * 3
+            // Gust volume
+            const gustVol = baseVol - 5
+            this.gustNoise.volume.rampTo(gustVol, dur/2)
+            setTimeout(() => {
+                this.gustNoise.volume.rampTo(-60, dur/2)
+            }, dur * 1000 / 2)
+
+            this.lastGustTime = time
+        }
+    }
+  }
+
+  dispose() {
+    this.noise.dispose()
+    this.filter.dispose()
+    this.gustNoise.dispose()
+    this.gustFilter.dispose()
+    this.panner.dispose()
+  }
+}
+
 // --- River Layer ---
-// Deep rumble + rushing water + occasional splashes
+// Deep rumble + rushing water + bubbles
 class RiverLayer {
   constructor(outputNode) {
-    // 0. Spatial Panner (Stereo Panner with LFO for width/movement)
+    // Stereo Panner
     this.panner = new Tone.Panner(0).connect(outputNode)
-
-    // LFO to slowly pan the river sound left/right to simulate flow direction/immersion
-    this.panLFO = new Tone.LFO(0.1, -0.3, 0.3).connect(this.panner.pan).start()
 
     // 1. Low Rumble (Brown Noise)
     this.rumbleFilter = new Tone.Filter(300, "lowpass").connect(this.panner)
     this.rumble = new Tone.Noise("brown").connect(this.rumbleFilter)
     this.rumble.volume.value = -60
+    this.rumble.start()
 
     // 2. Rushing Water (White Noise + Filter)
     this.rushFilter = new Tone.Filter(800, "lowpass").connect(this.panner)
     this.rushNoise = new Tone.Noise("pink").connect(this.rushFilter)
     this.rushNoise.volume.value = -60
+    this.rushNoise.start()
 
     // LFO to modulate filter frequency for "movement"
     this.rushLFO = new Tone.LFO(0.2, 600, 1000).connect(this.rushFilter.frequency).start()
 
-    // 3. Splashes (MetalSynth)
-    this.splashSynth = new Tone.MetalSynth({
-      frequency: 200,
-      envelope: { attack: 0.001, decay: 0.1, release: 0.01 },
-      harmonicity: 5.1,
-      modulationIndex: 32,
-      resonance: 4000,
-      octaves: 1.5
+    // 3. Bubbles (Membrane/Metal) - Near edges
+    this.bubbleSynth = new Tone.MembraneSynth({
+        pitchDecay: 0.05,
+        octaves: 4,
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 }
     }).connect(this.panner)
-    this.splashSynth.volume.value = -15
+    this.bubbleSynth.volume.value = -20
 
-    this.rumble.start()
-    this.rushNoise.start()
-
-    this.lastSplashTime = 0
+    this.lastBubbleTime = 0
   }
 
-  update(y, time) {
-    // Volume logic: Loudest at y=0, fades out by y=15
-    const vol = THREE.MathUtils.mapLinear(y, 0, 15, -12, -80)
-    const clampedVol = Math.max(-80, Math.min(-12, vol))
+  update(pos, time) {
+    // River is at X=0, Z=0 (approx), Y=-2
+    // Calculate distance to river line (X axis mostly)
+    // Assuming river flows along Z, so distance is abs(x)
+    // Wait, river visual is usually a strip. Let's assume it runs along Z at X=0.
+
+    const dist = Math.abs(pos.x)
+    const heightFactor = Math.max(0, 20 - pos.y) / 20 // Fade out as we go up
+
+    // Volume logic: Loudest at X=0
+    // Fade out by X=50
+    const distFactor = Math.max(0, 1 - dist / 50)
+
+    const vol = -20 - (1 - distFactor * heightFactor) * 40
+    const clampedVol = Math.max(-80, vol)
 
     this.rumble.volume.rampTo(clampedVol, 0.1)
-    this.rushNoise.volume.rampTo(clampedVol - 5, 0.1) // Rush is slightly quieter
+    this.rushNoise.volume.rampTo(clampedVol - 5, 0.1)
 
-    // Trigger splash occasionally if near water
-    if (y < 3 && time - this.lastSplashTime > 2 + Math.random() * 5) {
-      if (Math.random() > 0.7) {
-        // Randomize pitch slightly
-        this.splashSynth.frequency.value = 150 + Math.random() * 100
-        this.splashSynth.triggerAttackRelease("32n", time)
-        this.lastSplashTime = time
+    // Panning: If camera is at X=-10, river (X=0) is to the RIGHT (+1)
+    // Pan = (RiverX - CamX) / Scale
+    const pan = THREE.MathUtils.clamp((0 - pos.x) / 30, -1, 1)
+    this.panner.pan.rampTo(pan, 0.1)
+
+    // Bubbles near water
+    if (dist < 10 && pos.y < 5 && time - this.lastBubbleTime > 0.1 + Math.random() * 0.5) {
+      if (Math.random() > 0.8) {
+        this.bubbleSynth.triggerAttackRelease("C2", "32n", time)
+        this.lastBubbleTime = time
       }
     }
   }
@@ -66,134 +148,120 @@ class RiverLayer {
     this.rushNoise.dispose()
     this.rushFilter.dispose()
     this.rushLFO.dispose()
-    this.panLFO.dispose()
     this.panner.dispose()
-    this.splashSynth.dispose()
+    this.bubbleSynth.dispose()
   }
 }
 
 // --- Wood Layer ---
-// Creaking trees in the wind
+// Creaking trees
 class WoodLayer {
   constructor(outputNode) {
     this.output = outputNode
-
-    // Panner for spatial positioning
     this.panner = new Tone.Panner(0).connect(this.output)
-    this.panLFO = new Tone.LFO(0.05, -0.7, 0.7).connect(this.panner.pan).start()
 
-    // FM Synth for creaking sound
     this.synth = new Tone.FMSynth({
       harmonicity: 8,
       modulationIndex: 20,
       detune: 0,
       oscillator: { type: "sawtooth" },
-      envelope: { attack: 2, decay: 1, sustain: 1, release: 3 },
+      envelope: { attack: 1, decay: 1, sustain: 1, release: 2 },
       modulation: { type: "square" },
       modulationEnvelope: { attack: 0.5, decay: 0, sustain: 1, release: 0.5 }
     }).connect(this.panner)
+    this.synth.volume.value = -30
 
-    // Filter to dampen the sound
-    this.filter = new Tone.Filter(300, "lowpass").connect(this.panner)
+    this.filter = new Tone.Filter(400, "lowpass").connect(this.panner)
     this.synth.disconnect()
     this.synth.connect(this.filter)
-
-    this.synth.volume.value = -30 // Base volume
 
     this.lastCreakTime = 0
   }
 
-  update(y, time) {
-    // Trigger occasionally
-    if (time - this.lastCreakTime > 8 + Math.random() * 15) {
-      if (Math.random() > 0.4) {
-        const freq = 35 + Math.random() * 25 // Low frequency
-        const dur = 3 + Math.random() * 4 // Long duration
-        this.synth.triggerAttackRelease(freq, dur, time)
-        this.lastCreakTime = time
+  update(pos, time) {
+    // Only creak in the forest (not too high, not too far)
+    if (pos.y > 0 && pos.y < 30) {
+        if (time - this.lastCreakTime > 8 + Math.random() * 15) {
+            if (Math.random() > 0.6) {
+                // Random Pan
+                this.panner.pan.value = (Math.random() - 0.5) * 1.5
 
-        // Volume modulation: louder in canopy/wind
-        const vol = THREE.MathUtils.mapLinear(y, 0, 30, -35, -20)
-        this.synth.volume.rampTo(vol, 1)
-      }
+                const freq = 40 + Math.random() * 20
+                const dur = 2 + Math.random() * 3
+                this.synth.triggerAttackRelease(freq, dur, time)
+                this.lastCreakTime = time
+            }
+        }
     }
   }
 
   dispose() {
     this.synth.dispose()
     this.filter.dispose()
-    this.panLFO.dispose()
     this.panner.dispose()
   }
 }
 
 // --- Canopy Layer ---
-// Wind (Pink Noise + AutoFilter) + "Air" presence
+// High freq leaves, rustling
 class CanopyLayer {
   constructor(outputNode) {
-    // Stereo Panner for wind movement
     this.panner = new Tone.Panner(0).connect(outputNode)
-    this.panLFO = new Tone.LFO(0.05, -0.5, 0.5).connect(this.panner.pan).start() // Slow swirl
 
-    // 1. Wind Gusts
-    // AutoFilter creates a sweeping effect
-    this.windFilter = new Tone.AutoFilter({
-      frequency: 0.1,
-      baseFrequency: 200,
-      octaves: 4,
-      type: "sine",
-      depth: 0.8
-    }).connect(this.panner).start()
-
-    this.windNoise = new Tone.Noise("pink").connect(this.windFilter)
-    this.windNoise.volume.value = -60
-    this.windNoise.start()
-
-    // 2. High Air (Hiss)
-    this.airFilter = new Tone.Filter(4000, "highpass").connect(this.panner)
+    // High Air (Hiss)
+    this.airFilter = new Tone.Filter(5000, "highpass").connect(this.panner)
     this.airNoise = new Tone.Noise("white").connect(this.airFilter)
     this.airNoise.volume.value = -60
     this.airNoise.start()
+
+    // Leaf Rustle (Filtered Pink Noise)
+    this.rustleFilter = new Tone.AutoFilter({
+        frequency: 2,
+        baseFrequency: 4000,
+        octaves: 2,
+        depth: 0.5
+    }).connect(this.panner).start()
+
+    this.rustleNoise = new Tone.Noise("pink").connect(this.rustleFilter)
+    this.rustleNoise.volume.value = -60
+    this.rustleNoise.start()
   }
 
-  update(y) {
-    // Volume logic: Loudest at y=25, fades out by y=5
-    const vol = THREE.MathUtils.mapLinear(y, 5, 25, -60, -18)
-    const clampedVol = Math.max(-60, Math.min(-18, vol))
+  update(pos, time) {
+    // Loudest inside canopy (y=15 to 30)
+    const distToCanopy = Math.abs(pos.y - 20)
+    const vol = THREE.MathUtils.mapLinear(distToCanopy, 0, 20, -25, -60)
+    const clampedVol = Math.max(-60, vol)
 
-    this.windNoise.volume.rampTo(clampedVol, 0.1)
-    this.airNoise.volume.rampTo(clampedVol - 10, 0.1) // Air is subtle
+    this.airNoise.volume.rampTo(clampedVol - 10, 1)
+    this.rustleNoise.volume.rampTo(clampedVol, 0.5)
 
-    // Wind gets faster/more intense higher up
-    const windSpeed = THREE.MathUtils.mapLinear(y, 5, 30, 0.05, 0.2)
-    this.windFilter.frequency.rampTo(Math.max(0.05, Math.min(0.3, windSpeed)), 1)
+    // Pan based on position (subtle)
+    const pan = THREE.MathUtils.clamp(pos.x / 100, -0.5, 0.5)
+    this.panner.pan.rampTo(pan, 1)
   }
 
   dispose() {
-    this.windNoise.dispose()
-    this.windFilter.dispose()
     this.airNoise.dispose()
     this.airFilter.dispose()
-    this.panLFO.dispose()
+    this.rustleNoise.dispose()
+    this.rustleFilter.dispose()
     this.panner.dispose()
   }
 }
 
 // --- Rain Layer ---
-// Constant subtle rain texture
 class RainLayer {
   constructor(outputNode) {
     this.output = outputNode
-
     this.filter = new Tone.Filter(1000, "lowpass").connect(this.output)
     this.noise = new Tone.Noise("pink").connect(this.filter)
     this.noise.volume.value = -60
     this.noise.start()
   }
 
-  update() {
-    // Rain is everywhere but sounds different at different heights?
-    // For now, consistent background layer
+  update(pos) {
+    // Rain is constant background
     this.noise.volume.rampTo(-35, 2)
   }
 
@@ -203,211 +271,202 @@ class RainLayer {
   }
 }
 
-
 // --- Creature Manager ---
-// Birds, Insects, Frogs
 class CreatureManager {
   constructor(outputNode) {
     this.output = outputNode
 
-    // 1. Birds (FM Synth)
-    // Using Panner for spatialization
+    // 1. Birds (AM/FM Synth)
     this.birdPanner = new Tone.Panner3D(0, 0, 0).connect(this.output)
-    this.birdSynth = new Tone.FMSynth({
-      harmonicity: 3,
-      modulationIndex: 10,
-      detune: 0,
-      oscillator: { type: "sine" },
-      envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 },
-      modulation: { type: "square" },
-      modulationEnvelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+
+    // PolySynth for multiple birds? No, single bird logic is simpler for Panner3D
+    this.birdSynth = new Tone.Synth({
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
     }).connect(this.birdPanner)
-    this.birdSynth.volume.value = -10
+    this.birdSynth.volume.value = -15
 
-    // 2. Insects (High Frequency Drone/Pulse)
-    this.insectFilter = new Tone.Filter(8000, "highpass").connect(this.output)
-    // Using multiple oscillators for texture
-    this.insectOsc1 = new Tone.Oscillator(12000, "sawtooth").connect(this.insectFilter).start()
-    this.insectOsc2 = new Tone.Oscillator(13000, "sine").connect(this.insectFilter).start()
+    // 2. Insects
+    this.insectFilter = new Tone.Filter(9000, "highpass").connect(this.output)
+    this.insectOsc = new Tone.Oscillator(12000, "sawtooth").connect(this.insectFilter).start()
+    this.insectLFO = new Tone.LFO(15, -60, -40).connect(this.insectOsc.volume).start() // Buzzing volume
 
-    // Tremolo for buzzing
-    this.insectTremolo = new Tone.Tremolo(15, 0.7).connect(this.insectFilter).start()
-
-    this.insectOsc1.volume.value = -60
-    this.insectOsc2.volume.value = -60
-
-    // 3. Frogs (Low FM)
-    this.frogSynth = new Tone.FMSynth({
-      harmonicity: 1.5,
-      modulationIndex: 15,
-      oscillator: { type: "sine" },
-      envelope: { attack: 0.1, decay: 0.2, sustain: 0.1, release: 0.5 },
-      modulation: { type: "square" },
-      modulationEnvelope: { attack: 0.05, decay: 0.1, sustain: 0, release: 0.1 }
-    }).connect(this.output)
-    this.frogSynth.volume.value = -12
+    // 3. Frogs
+    this.frogPanner = new Tone.Panner(0).connect(this.output)
+    this.frogSynth = new Tone.MembraneSynth({
+        pitchDecay: 0.1,
+        octaves: 2,
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 }
+    }).connect(this.frogPanner)
+    this.frogSynth.volume.value = -18
 
     this.lastBirdTime = 0
     this.lastFrogTime = 0
   }
 
-  update(y, time) {
-    // Insects: Loudest in mid-levels (Understory: 2-15)
-    const insectVol = (y > 2 && y < 20) ? -28 : -60
-    this.insectOsc1.volume.rampTo(insectVol, 0.5)
-    this.insectOsc2.volume.rampTo(insectVol - 5, 0.5)
+  update(pos, time) {
+    // Update listener position for Panner3D (Birds)
+    Tone.Listener.positionX.value = pos.x
+    Tone.Listener.positionY.value = pos.y
+    Tone.Listener.positionZ.value = pos.z
 
-    // Birds: Mostly Canopy (y > 10)
-    if (y > 8 && time - this.lastBirdTime > 3 + Math.random() * 4) {
-      if (Math.random() > 0.5) {
-        // Random Position
-        this.birdPanner.positionX.value = (Math.random() - 0.5) * 20
-        this.birdPanner.positionY.value = 10 + Math.random() * 10
-        this.birdPanner.positionZ.value = (Math.random() - 0.5) * 20
+    // Birds
+    if (time - this.lastBirdTime > 5 + Math.random() * 10) { // 5-15s interval
+      if (Math.random() > 0.4) {
+        // Random Position around listener
+        const angle = Math.random() * Math.PI * 2
+        const dist = 10 + Math.random() * 20
+        const bx = pos.x + Math.cos(angle) * dist
+        const by = Math.max(10, pos.y + (Math.random()-0.5)*10) // Usually above
+        const bz = pos.z + Math.sin(angle) * dist
 
-        // Random Call
-        const freq = 600 + Math.random() * 1200
-        this.birdSynth.harmonicity.value = 1 + Math.random() * 4
-        this.birdSynth.triggerAttackRelease(freq, "16n", time)
+        this.birdPanner.positionX.value = bx
+        this.birdPanner.positionY.value = by
+        this.birdPanner.positionZ.value = bz
+
+        // Pitch variation
+        // Base C6 (approx 1046Hz) +/- variation
+        const notes = ["C6", "E6", "G6", "A6", "C7"]
+        const note = notes[Math.floor(Math.random() * notes.length)]
+
+        // Play pattern
+        const pattern = Math.random()
+        if (pattern < 0.3) {
+            this.birdSynth.triggerAttackRelease(note, "16n", time)
+        } else if (pattern < 0.6) {
+             this.birdSynth.triggerAttackRelease(note, "32n", time)
+             this.birdSynth.triggerAttackRelease(note, "32n", time + 0.1)
+        } else {
+             // Slide
+             this.birdSynth.triggerAttackRelease(note, "8n", time)
+             this.birdSynth.frequency.rampTo(Tone.Frequency(note).transpose(-2), 0.1, time)
+        }
+
         this.lastBirdTime = time
       }
     }
 
-    // Frogs: River (y < 4)
-    if (y < 4 && time - this.lastFrogTime > 4 + Math.random() * 6) {
-       if (Math.random() > 0.6) {
-         const freq = 100 + Math.random() * 50
-         this.frogSynth.triggerAttackRelease(freq, "8n", time)
-         this.lastFrogTime = time
-       }
+    // Insects (Louder in dense understory)
+    const insectVol = (pos.y > 1 && pos.y < 15) ? -20 : -50
+    this.insectLFO.max = insectVol
+    this.insectLFO.min = insectVol - 10
+
+    // Frogs (Near water)
+    if (pos.y < 5) {
+        if (time - this.lastFrogTime > 3 + Math.random() * 5) {
+            if (Math.random() > 0.6) {
+                this.frogPanner.pan.value = (Math.random() - 0.5) * 1.5
+                this.frogSynth.triggerAttackRelease("C2", "8n", time)
+                this.lastFrogTime = time
+            }
+        }
     }
   }
 
   dispose() {
     this.birdSynth.dispose()
     this.birdPanner.dispose()
-    this.insectOsc1.dispose()
-    this.insectOsc2.dispose()
+    this.insectOsc.dispose()
     this.insectFilter.dispose()
-    this.insectTremolo.dispose()
+    this.insectLFO.dispose()
     this.frogSynth.dispose()
+    this.frogPanner.dispose()
   }
 }
 
 // --- Ambience Layer ---
-// Subtle musical pads + Magical Shimmer
 class AmbienceLayer {
     constructor(outputNode) {
         this.output = outputNode
-
-        // 1. Pad Synth
         this.padSynth = new Tone.PolySynth(Tone.Synth, {
             oscillator: { type: "sine" },
-            envelope: { attack: 3, decay: 4, sustain: 0.8, release: 5 }
-        })
-        this.padFilter = new Tone.Filter(600, "lowpass").connect(this.output)
-        this.padSynth.connect(this.padFilter)
-        this.padSynth.volume.value = -32
-
-        // 2. Shimmer Layer (MetalSynth)
-        this.shimmerPanner = new Tone.Panner(0).connect(this.output)
-        this.shimmerLFO = new Tone.LFO(0.1, -0.5, 0.5).connect(this.shimmerPanner.pan).start()
-
-        this.shimmer = new Tone.MetalSynth({
-            frequency: 200,
-            envelope: { attack: 0.5, decay: 0.5, release: 0.5 },
-            harmonicity: 3.1,
-            modulationIndex: 16,
-            resonance: 3000,
-            octaves: 1.0
-        }).connect(this.shimmerPanner)
-        this.shimmer.volume.value = -45 // Very subtle background texture
-
+            envelope: { attack: 2, decay: 3, sustain: 0.6, release: 4 }
+        }).connect(this.output)
+        this.padSynth.volume.value = -35
         this.lastChordTime = 0
-        this.lastShimmerTime = 0
-
-        this.chords = [
-            ["C4", "E4", "G4", "B4"],
-            ["A3", "C4", "E4", "G4"],
-            ["F3", "A3", "C4", "E4"],
-            ["G3", "B3", "D4", "F4"]
-        ]
+        this.chords = [["C3", "E3", "G3"], ["F3", "A3", "C4"], ["G3", "B3", "D4"], ["A2", "C3", "E3"]]
         this.currentChord = 0
     }
 
-    update(y, time) {
-        // Chords
-        if (time - this.lastChordTime > 14) {
-             this.padSynth.triggerAttackRelease(this.chords[this.currentChord], "6m", time)
+    update(pos, time) {
+        if (time - this.lastChordTime > 12) {
+             this.padSynth.triggerAttackRelease(this.chords[this.currentChord], "4m", time)
              this.currentChord = (this.currentChord + 1) % this.chords.length
              this.lastChordTime = time
-        }
-
-        // Shimmer: random high textures
-        if (time - this.lastShimmerTime > 2 + Math.random() * 5) {
-            if (Math.random() > 0.6) {
-                const freq = 800 + Math.random() * 1000
-                this.shimmer.frequency.rampTo(freq, 0.1)
-                this.shimmer.triggerAttackRelease("16n", time)
-                this.lastShimmerTime = time
-            }
         }
     }
 
     dispose() {
         this.padSynth.dispose()
-        this.padFilter.dispose()
-        this.shimmer.dispose()
-        this.shimmerLFO.dispose()
-        this.shimmerPanner.dispose()
     }
 }
 
 // --- Main Manager ---
 export class SoundscapeManager {
   constructor() {
-    console.log("Initializing Soundscape Manager")
-
-    // Master Output with Limiter
     this.limiter = new Tone.Limiter(-1).toDestination()
+    this.reverb = new Tone.Reverb({ decay: 5, wet: 0.3 }).connect(this.limiter)
+    this.reverb.generate()
 
-    // Global Reverb (Convolver for realism would be better, but Reverb is lighter)
-    // We'll use a long decay for the "forest echo"
-    this.reverb = new Tone.Reverb({
-      decay: 4,
-      wet: 0.3,
-      preDelay: 0.05
-    }).connect(this.limiter)
-    this.reverb.generate() // Important!
-
-    // Layers connect to Reverb
     this.river = new RiverLayer(this.reverb)
     this.canopy = new CanopyLayer(this.reverb)
     this.wood = new WoodLayer(this.reverb)
     this.rain = new RainLayer(this.reverb)
     this.creatures = new CreatureManager(this.reverb)
     this.ambience = new AmbienceLayer(this.reverb)
+    this.wind = new WindLayer(this.reverb)
 
-    // Transport helps with timing if needed, but we rely on update(time) mostly
+    // Thunder Synth
+    this.thunderSynth = new Tone.NoiseSynth({
+        noise: { type: "pink" },
+        envelope: { attack: 0.01, decay: 1.5, sustain: 0 }
+    }).connect(this.reverb)
+    this.thunderSynth.volume.value = -10
+
+    // Rumble for thunder
+    this.thunderRumble = new Tone.MembraneSynth({
+        pitchDecay: 0.2,
+        octaves: 4
+    }).connect(this.reverb)
+    this.thunderRumble.volume.value = -5
+
     Tone.Transport.start()
   }
 
-  update(y) {
+  update(pos) {
+    // Ensure pos is Vector3 (it should be coming from AudioController)
+    // If just number (legacy), map to Vector3
+    const p = (typeof pos === 'number') ? new THREE.Vector3(0, pos, 0) : pos
     const time = Tone.now()
 
-    this.river.update(y, time)
-    this.canopy.update(y, time)
-    this.wood.update(y, time)
-    this.rain.update(y, time)
-    this.creatures.update(y, time)
-    this.ambience.update(y, time)
+    this.river.update(p, time)
+    this.canopy.update(p, time)
+    this.wood.update(p, time)
+    this.rain.update(p) // Rain is ubiquitous
+    this.creatures.update(p, time)
+    this.ambience.update(p, time)
+    this.wind.update(p, time)
+  }
 
-    // Adjust Reverb Mix based on location?
-    // More reverb in canopy (open), less in understory (dense)?
-    // Or more reverb in river (reflections)?
-    // Let's keep it simple for now, maybe slight adjustment
-    const reverbWet = THREE.MathUtils.mapLinear(y, 0, 30, 0.4, 0.2) // Wetter at bottom
-    this.reverb.wet.rampTo(reverbWet, 0.5)
+  triggerThunder(distance) {
+    const time = Tone.now()
+    // Speed of sound delay: 343 m/s
+    const delay = distance / 343
+    const arrivalTime = time + delay
+
+    // Low pass filter based on distance (distant thunder is muffled)
+    // We can't easily dynamic filter per trigger without new nodes,
+    // but we can adjust volume and decay.
+
+    // Volume attenuation
+    const vol = Math.max(-40, -10 - (distance / 500) * 30)
+
+    this.thunderSynth.volume.value = vol
+    this.thunderRumble.volume.value = vol + 5
+
+    this.thunderSynth.triggerAttackRelease("8n", arrivalTime)
+    this.thunderRumble.triggerAttackRelease("C1", "2n", arrivalTime)
   }
 
   dispose() {
@@ -417,6 +476,9 @@ export class SoundscapeManager {
     this.rain.dispose()
     this.creatures.dispose()
     this.ambience.dispose()
+    this.wind.dispose()
+    this.thunderSynth.dispose()
+    this.thunderRumble.dispose()
     this.reverb.dispose()
     this.limiter.dispose()
     Tone.Transport.stop()

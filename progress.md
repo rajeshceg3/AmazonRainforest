@@ -6,18 +6,23 @@
 - **Camera System**: Implemented "slow drift" and "gentle head sway" camera controller, now with vertical scroll/drag exploration to traverse layers (River -> Understory -> Canopy).
 - **Environment Layers**:
     - **Forest Floor**: Procedural terrain with noise-based height, vertex coloring, and instanced grass/ferns.
-    - **River**: Water plane with wave animation and reflections.
+    - **River**: Water plane with dual-scrolling normal maps for turbulence and wave animation.
     - **Understory**: Hanging vines and epiphytes creating vertical depth.
-    - **Canopy**: Procedural trees with trunks and clustered leaves.
+    - **Canopy**: Procedural trees with trunks and clustered leaves using custom wind shaders.
 - **Atmospheric Effects**:
     - Enhanced fog and warm directional lighting for atmosphere.
     - Particle-based rain system.
+    - Dynamic lightning with synchronized thunder audio.
 - **Fauna**:
     - **Butterflies**: Animated with fluttering wings and organic path movement.
     - **Jaguar**: Model updated to use organic shapes (capsules/spheres) and proper orientation.
     - **Pink Dolphin**: Procedural animated model in the river.
     - **Sloth**: Procedural animated model hanging in the understory.
     - **Macaw**: Procedural animated bird flying in the canopy.
+- **Audio**:
+    - **Soundscape**: Comprehensive procedural audio system using Tone.js.
+    - **Spatial Audio**: 3D panning for river, wind, and creature sounds relative to camera position.
+    - **Dynamic Layers**: Wind gusts, rain intensity, and distance-based thunder delay.
 - **UI**: Minimalist poetic text overlay with fade transitions and interaction hints.
 
 ## Completed in this session
@@ -26,7 +31,9 @@
 - **Fauna Expansion**: Created `PinkDolphin`, `Sloth`, and `Macaw` procedural models.
 - **Interaction**: Updated `CameraController` to support vertical scrolling for layer exploration.
 - **Polish**: Added interaction hints to `Overlay`, improved lighting and atmosphere in `Scene`.
-- **Verification**: Ran Playwright tests to confirm scene rendering and navigation.
+- **Audio Implementation**: Built `SoundscapeManager`, `AudioController`, and integrated spatial audio logic.
+- **Shader Enhancement**: Developed `LeafMaterial` with custom GLSL injection for organic wind sway and flutter.
+- **Verification**: Ran Playwright tests to confirm scene rendering and fixed WebGL shader compilation errors.
 
 ## Completion Percentage
-90%
+95%

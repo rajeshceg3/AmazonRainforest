@@ -9,7 +9,7 @@ import { getTerrainHeight } from '../../utils/TerrainHeight'
 const useFernGeometry = () => {
   return useMemo(() => {
     // Single frond geometry
-    const frond = new THREE.PlaneGeometry(0.3, 1.0, 2, 6)
+    const frond = new THREE.PlaneGeometry(0.3, 1.0, 3, 10)
     frond.translate(0, 0.5, 0) // Pivot at bottom
 
     const pos = frond.attributes.position
@@ -102,7 +102,7 @@ const useFernGeometry = () => {
 
 const useGrassGeometry = () => {
     return useMemo(() => {
-        const geometry = new THREE.PlaneGeometry(0.08, 0.6, 2, 4)
+        const geometry = new THREE.PlaneGeometry(0.08, 0.6, 2, 6)
         geometry.translate(0, 0.3, 0)
 
         const pos = geometry.attributes.position
