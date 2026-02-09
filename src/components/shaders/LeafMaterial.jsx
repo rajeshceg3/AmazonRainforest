@@ -1,32 +1,38 @@
-import React, { useRef, useLayoutEffect } from 'react'
+import React, { useLayoutEffect, useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }) {
+export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaMask = 0.0, ...props }) {
   const materialRef = useRef()
 
+  // Uniforms ref to hold values and be accessible in useFrame
   const uniforms = useRef({
     uTime: { value: 0 },
     uWindStrength: { value: uWindStrength },
-    uWindSpeed: { value: uWindSpeed }
+    uWindSpeed: { value: uWindSpeed },
+    uUseAlphaMask: { value: uUseAlphaMask }
   })
 
+  // Update uniforms when props change
   useLayoutEffect(() => {
+    uniforms.current.uWindStrength.value = uWindStrength
+    uniforms.current.uWindSpeed.value = uWindSpeed
+    uniforms.current.uUseAlphaMask.value = uUseAlphaMask
+  }, [uWindStrength, uWindSpeed, uUseAlphaMask])
+
+  // Update time every frame
+  useFrame((state) => {
     if (uniforms.current) {
-      uniforms.current.uWindStrength.value = uWindStrength
-      uniforms.current.uWindSpeed.value = uWindSpeed
+        uniforms.current.uTime.value = state.clock.elapsedTime
     }
-  }, [uWindStrength, uWindSpeed])
+  })
 
-  useLayoutEffect(() => {
-    if (!materialRef.current) return
-
-    const material = materialRef.current
-
-    material.onBeforeCompile = (shader) => {
+  const onBeforeCompile = useMemo(() => (shader) => {
+      // Link shader uniforms to our local uniforms ref
       shader.uniforms.uTime = uniforms.current.uTime
       shader.uniforms.uWindStrength = uniforms.current.uWindStrength
       shader.uniforms.uWindSpeed = uniforms.current.uWindSpeed
+      shader.uniforms.uUseAlphaMask = uniforms.current.uUseAlphaMask
 
       // Common Noise Function (2D)
       const noiseFunc = `
@@ -64,51 +70,33 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }
         uniform float uWindStrength;
         uniform float uWindSpeed;
         varying vec3 vInstanceWorldPos;
-
         ${noiseFunc}
       ` + shader.vertexShader
 
-      // Inject Wind Logic
       shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
         `
         #include <begin_vertex>
 
-        // Get world position of the instance/object
-        vec3 worldPos = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-        #ifdef USE_INSTANCING
-          worldPos = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-        #endif
+        vec4 worldPos = instanceMatrix * vec4(transformed, 1.0);
+        worldPos = modelMatrix * worldPos;
+        vInstanceWorldPos = worldPos.xyz;
 
-        vInstanceWorldPos = worldPos;
+        float windNoise = leaf_snoise(worldPos.xz * 0.1 + uTime * uWindSpeed * 0.5);
+        float windGust = smoothstep(0.0, 1.0, windNoise);
 
-        // Noise inputs (Use XZ and Time)
-        float time = uTime * uWindSpeed;
+        float bend = uv.y * uWindStrength * (0.1 + windGust * 0.2);
 
-        // Large scale wind gusts (low frequency)
-        float gust = leaf_snoise(worldPos.xz * 0.02 + vec2(time * 0.2, 0.0));
-        gust = smoothstep(-0.2, 0.8, gust);
-
-        // Small scale flutter (high frequency)
-        float flutter = leaf_snoise(worldPos.xz * 0.5 + vec2(time * 1.5, 0.0));
-
-        // Combined wind force
-        float wind = (gust * 0.8 + flutter * 0.2) * uWindStrength;
-
-        // Apply deformation
-        float bendFactor = pow(max(0.0, position.y + 0.2), 1.5);
-
-        // Direction: approximate diagonal
-        vec3 windDir = normalize(vec3(1.0, 0.2, 0.5));
-
-        transformed += windDir * wind * bendFactor * 0.5;
-        transformed.x += flutter * bendFactor * 0.1;
+        transformed.x += sin(uTime * 2.0 + worldPos.x) * bend;
+        transformed.z += cos(uTime * 1.5 + worldPos.z) * bend;
+        transformed.y += sin(uTime * 3.0 + worldPos.x * 0.5) * bend * 0.5;
         `
       )
 
       // --- Fragment Shader Injection ---
       shader.fragmentShader = `
         uniform float uTime;
+        uniform float uUseAlphaMask;
         varying vec3 vInstanceWorldPos;
         ${noiseFunc}
       ` + shader.fragmentShader
@@ -118,53 +106,34 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }
         `
         #include <color_fragment>
 
-        // Cloud Shadows
-        // Large scale noise moving over time
-        float cloudNoise = leaf_snoise(vInstanceWorldPos.xz * 0.01 + vec2(uTime * 0.05, 0.0));
-        float cloudShadow = smoothstep(0.0, 0.6, cloudNoise); // 0 to 1
-
-        // Darken diffuse color based on shadow
-        diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.4, cloudShadow * 0.7);
-
         #ifdef USE_UV
             // Organic variation
             float n = leaf_snoise(vUv * 10.0);
-
-            // Subtle vein pattern
             float vein = smoothstep(0.4, 0.5, abs(n));
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.8, vein * 0.3);
 
-            // Soft Edge Alpha
-            float dist = distance(vUv, vec2(0.5));
-            float edgeNoise = leaf_snoise(vUv * 20.0) * 0.05;
-            float alphaMask = 1.0 - smoothstep(0.4, 0.5, dist + edgeNoise * 0.2);
+            // Cloud Shadows
+            float cloudNoise = leaf_snoise(vInstanceWorldPos.xz * 0.01 + vec2(uTime * 0.05, 0.0));
+            float cloudShadow = smoothstep(0.0, 0.6, cloudNoise);
+            diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.4, cloudShadow * 0.7);
 
-            diffuseColor.a *= alphaMask;
+            // Soft Edge Alpha (Disabled if uUseAlphaMask <= 0.5)
+            if (uUseAlphaMask > 0.5) {
+                float dist = distance(vUv, vec2(0.5));
+                float edgeNoise = leaf_snoise(vUv * 20.0) * 0.05;
+                float alphaMask = 1.0 - smoothstep(0.4, 0.5, dist + edgeNoise * 0.2);
+                diffuseColor.a *= alphaMask;
+            }
         #endif
-
-        if (!gl_FrontFacing) {
-            diffuseColor.rgb *= 1.5;
-            diffuseColor.rgb += vec3(0.15, 0.2, 0.05);
-        }
         `
       )
-    }
-
-    material.needsUpdate = true
   }, [])
-
-  useFrame((state) => {
-    if (uniforms.current) {
-      uniforms.current.uTime.value = state.clock.elapsedTime
-    }
-  })
 
   return (
     <meshStandardMaterial
       ref={materialRef}
       side={THREE.DoubleSide}
-      transparent
-      alphaTest={0.5}
+      onBeforeCompile={onBeforeCompile}
       defines={{ USE_UV: '' }}
       {...props}
     />

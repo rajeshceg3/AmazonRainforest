@@ -6,7 +6,7 @@ import { LeafMaterial } from '../shaders/LeafMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 const TreeConfig = {
-  count: 250,
+  count: 100,
   area: 400,
   minHeight: 12,
   maxHeight: 25,
@@ -181,7 +181,7 @@ const Canopy = () => {
 
       {/* Leaves */}
       <Instances range={leaves.length} geometry={leafClusterGeo} castShadow receiveShadow>
-        <LeafMaterial />
+        <LeafMaterial uUseAlphaMask={1.0} uWindStrength={0.5} />
         {leaves.map((data, i) => (
           <Instance
             key={`leaf-${i}`}

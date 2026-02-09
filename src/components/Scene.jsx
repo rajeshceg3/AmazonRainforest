@@ -30,7 +30,7 @@ const Scene = ({ audioStarted }) => {
       <AudioController started={audioStarted} />
 
       {/* Environment Lighting replaces generic HemisphereLight for more realism */}
-      <Environment preset="forest" background={false} environmentIntensity={0.8} />
+      <Environment preset="forest" background={false} environmentIntensity={0.9} />
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
@@ -45,7 +45,7 @@ const Scene = ({ audioStarted }) => {
       </directionalLight>
 
       {/* Blue Fill Light for Contrast/Skylight */}
-      <pointLight position={[-50, 20, -50]} intensity={1.5} color="#4a6fa5" distance={300} decay={2} />
+      <pointLight position={[-50, 20, -50]} intensity={1.0} color="#6a7a8a" distance={300} decay={2} />
 
       {/* Atmospheric Clouds */}
       <Cloud opacity={0.4} speed={0.1} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
