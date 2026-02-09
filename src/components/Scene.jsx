@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, Sparkles, Cloud } from '@react-three/drei'
-import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Noise, Vignette, DepthOfField } from '@react-three/postprocessing'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
@@ -44,6 +44,9 @@ const Scene = ({ audioStarted }) => {
       >
         <orthographicCamera attach="shadow-camera" args={[-200, 200, 200, -200, 0.1, 500]} />
       </directionalLight>
+
+      {/* Blue Fill Light for Contrast/Skylight */}
+      <pointLight position={[-50, 20, -50]} intensity={1.5} color="#4a6fa5" distance={300} decay={2} />
 
       {/* Atmospheric Clouds */}
       <Cloud opacity={0.4} speed={0.1} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
@@ -90,6 +93,7 @@ const Scene = ({ audioStarted }) => {
 
       {/* Post Processing for Realism */}
       <EffectComposer disableNormalPass>
+        <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} height={480} />
         <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} height={300} intensity={0.4} />
         <Noise opacity={0.025} />
         <Vignette eskil={false} offset={0.1} darkness={1.1} />

@@ -6,7 +6,6 @@ import * as THREE from 'three'
 class RiverLayer {
   constructor(outputNode) {
     // 0. Spatial Panner (Stereo Panner with LFO for width/movement)
-    // Since we don't have full X/Z coordinates passed easily, we simulate flow "around"
     this.panner = new Tone.Panner(0).connect(outputNode)
 
     // LFO to slowly pan the river sound left/right to simulate flow direction/immersion
@@ -18,7 +17,6 @@ class RiverLayer {
     this.rumble.volume.value = -60
 
     // 2. Rushing Water (White Noise + Filter)
-    // Dynamic filter to simulate water movement
     this.rushFilter = new Tone.Filter(800, "lowpass").connect(this.panner)
     this.rushNoise = new Tone.Noise("pink").connect(this.rushFilter)
     this.rushNoise.volume.value = -60
@@ -71,6 +69,61 @@ class RiverLayer {
     this.panLFO.dispose()
     this.panner.dispose()
     this.splashSynth.dispose()
+  }
+}
+
+// --- Wood Layer ---
+// Creaking trees in the wind
+class WoodLayer {
+  constructor(outputNode) {
+    this.output = outputNode
+
+    // Panner for spatial positioning
+    this.panner = new Tone.Panner(0).connect(this.output)
+    this.panLFO = new Tone.LFO(0.05, -0.7, 0.7).connect(this.panner.pan).start()
+
+    // FM Synth for creaking sound
+    this.synth = new Tone.FMSynth({
+      harmonicity: 8,
+      modulationIndex: 20,
+      detune: 0,
+      oscillator: { type: "sawtooth" },
+      envelope: { attack: 2, decay: 1, sustain: 1, release: 3 },
+      modulation: { type: "square" },
+      modulationEnvelope: { attack: 0.5, decay: 0, sustain: 1, release: 0.5 }
+    }).connect(this.panner)
+
+    // Filter to dampen the sound
+    this.filter = new Tone.Filter(300, "lowpass").connect(this.panner)
+    this.synth.disconnect()
+    this.synth.connect(this.filter)
+
+    this.synth.volume.value = -30 // Base volume
+
+    this.lastCreakTime = 0
+  }
+
+  update(y, time) {
+    // Trigger occasionally
+    if (time - this.lastCreakTime > 8 + Math.random() * 15) {
+      if (Math.random() > 0.4) {
+        const freq = 35 + Math.random() * 25 // Low frequency
+        const dur = 3 + Math.random() * 4 // Long duration
+        this.synth.triggerAttackRelease(freq, dur, time)
+        this.lastCreakTime = time
+
+        // Volume modulation: louder in canopy/wind
+        const vol = THREE.MathUtils.mapLinear(y, 0, 30, -35, -20)
+        this.synth.volume.rampTo(vol, 1)
+      }
+    }
+  }
+
+  dispose() {
+    this.synth.dispose()
+    this.filter.dispose()
+    this.panLFO.dispose()
+    this.panner.dispose()
   }
 }
 
@@ -242,25 +295,37 @@ class CreatureManager {
 }
 
 // --- Ambience Layer ---
-// Subtle musical pads for relaxation and "magical" feel
+// Subtle musical pads + Magical Shimmer
 class AmbienceLayer {
     constructor(outputNode) {
         this.output = outputNode
 
-        // PolySynth for chords
-        this.synth = new Tone.PolySynth(Tone.Synth, {
+        // 1. Pad Synth
+        this.padSynth = new Tone.PolySynth(Tone.Synth, {
             oscillator: { type: "sine" },
-            envelope: { attack: 2, decay: 3, sustain: 0.8, release: 4 }
+            envelope: { attack: 3, decay: 4, sustain: 0.8, release: 5 }
         })
+        this.padFilter = new Tone.Filter(600, "lowpass").connect(this.output)
+        this.padSynth.connect(this.padFilter)
+        this.padSynth.volume.value = -32
 
-        this.synth.volume.value = -30 // Very subtle
+        // 2. Shimmer Layer (MetalSynth)
+        this.shimmerPanner = new Tone.Panner(0).connect(this.output)
+        this.shimmerLFO = new Tone.LFO(0.1, -0.5, 0.5).connect(this.shimmerPanner.pan).start()
 
-        this.filter = new Tone.Filter(800, "lowpass").connect(this.output)
-        this.synth.connect(this.filter)
+        this.shimmer = new Tone.MetalSynth({
+            frequency: 200,
+            envelope: { attack: 0.5, decay: 0.5, release: 0.5 },
+            harmonicity: 3.1,
+            modulationIndex: 16,
+            resonance: 3000,
+            octaves: 1.0
+        }).connect(this.shimmerPanner)
+        this.shimmer.volume.value = -45 // Very subtle background texture
 
         this.lastChordTime = 0
+        this.lastShimmerTime = 0
 
-        // C Major 7 / A Minor 7 / F Major 7 / G Major
         this.chords = [
             ["C4", "E4", "G4", "B4"],
             ["A3", "C4", "E4", "G4"],
@@ -271,22 +336,30 @@ class AmbienceLayer {
     }
 
     update(y, time) {
-        // Trigger a new chord every ~10-15 seconds
-        if (time - this.lastChordTime > 12) {
-             this.synth.triggerAttackRelease(this.chords[this.currentChord], "4m", time)
+        // Chords
+        if (time - this.lastChordTime > 14) {
+             this.padSynth.triggerAttackRelease(this.chords[this.currentChord], "6m", time)
              this.currentChord = (this.currentChord + 1) % this.chords.length
              this.lastChordTime = time
         }
 
-        // Modulate volume based on height (subtle change)
-        // Maybe louder in the canopy (heavenly)
-        // const vol = THREE.MathUtils.mapLinear(y, 0, 30, -35, -25)
-        // this.synth.volume.rampTo(vol, 1)
+        // Shimmer: random high textures
+        if (time - this.lastShimmerTime > 2 + Math.random() * 5) {
+            if (Math.random() > 0.6) {
+                const freq = 800 + Math.random() * 1000
+                this.shimmer.frequency.rampTo(freq, 0.1)
+                this.shimmer.triggerAttackRelease("16n", time)
+                this.lastShimmerTime = time
+            }
+        }
     }
 
     dispose() {
-        this.synth.dispose()
-        this.filter.dispose()
+        this.padSynth.dispose()
+        this.padFilter.dispose()
+        this.shimmer.dispose()
+        this.shimmerLFO.dispose()
+        this.shimmerPanner.dispose()
     }
 }
 
@@ -310,6 +383,7 @@ export class SoundscapeManager {
     // Layers connect to Reverb
     this.river = new RiverLayer(this.reverb)
     this.canopy = new CanopyLayer(this.reverb)
+    this.wood = new WoodLayer(this.reverb)
     this.rain = new RainLayer(this.reverb)
     this.creatures = new CreatureManager(this.reverb)
     this.ambience = new AmbienceLayer(this.reverb)
@@ -323,6 +397,7 @@ export class SoundscapeManager {
 
     this.river.update(y, time)
     this.canopy.update(y, time)
+    this.wood.update(y, time)
     this.rain.update(y, time)
     this.creatures.update(y, time)
     this.ambience.update(y, time)
@@ -338,6 +413,7 @@ export class SoundscapeManager {
   dispose() {
     this.river.dispose()
     this.canopy.dispose()
+    this.wood.dispose()
     this.rain.dispose()
     this.creatures.dispose()
     this.ambience.dispose()

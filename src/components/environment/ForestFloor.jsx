@@ -57,14 +57,7 @@ const useFernGeometry = () => {
         geometries.push(f)
     }
 
-    // Merge
-    // Use Utils to merge? Or manual?
-    // Manual is safer for custom attributes if needed, but Utils.mergeBufferGeometries is standard.
-    // However, merging BufferGeometries is easy.
-    // Let's use manual merge similar to Canopy to avoid dependency issues or imports if not available.
-    // Actually, THREE.BufferGeometryUtils might not be imported.
-    // Manual merge:
-
+    // Manual merge
     let totalVerts = 0
     geometries.forEach(g => totalVerts += g.attributes.position.count)
 
@@ -132,12 +125,30 @@ const useGrassGeometry = () => {
     }, [])
 }
 
+const useFallenLeafGeometry = () => {
+    return useMemo(() => {
+        const geometry = new THREE.PlaneGeometry(0.3, 0.4, 2, 2)
+        const pos = geometry.attributes.position
+        for(let i=0; i<pos.count; i++){
+            // Random crunch?
+            const z = pos.getZ(i)
+            // Curl
+            const x = pos.getX(i)
+            pos.setZ(i, z + Math.pow(x*2.0, 2.0)*0.1 + (Math.random()-0.5)*0.05)
+        }
+        geometry.computeVertexNormals()
+        return geometry
+    }, [])
+}
+
 const ForestFloor = () => {
   const fernCount = 2000
   const grassCount = 30000
+  const fallenLeafCount = 2000
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
+  const fallenGeo = useFallenLeafGeometry()
 
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
@@ -215,12 +226,50 @@ const ForestFloor = () => {
       return data
   }, [fernCount])
 
+  const fallenData = useMemo(() => {
+      const data = []
+      const baseColor = new THREE.Color("#8b5a2b")
+
+      for(let i=0; i<fallenLeafCount; i++) {
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          if(h < -0.3) continue;
+
+          const color = baseColor.clone()
+          color.offsetHSL((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2)
+
+          data.push({
+              position: [x, h + 0.02, z], // Just above ground
+              rotation: [-Math.PI/2, Math.random()*Math.PI*2, 0], // Flat
+              scale: 0.5 + Math.random() * 0.5,
+              color: color
+          })
+      }
+      return data
+  }, [fallenLeafCount])
+
   return (
     <group>
         {/* Ground Mesh */}
         <mesh geometry={groundGeo} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
             <TerrainMaterial uScale={0.1} uColorSoil={new THREE.Color("#2b1d0e")} uColorMoss={new THREE.Color("#1a331a")} />
         </mesh>
+
+        {/* Fallen Leaves */}
+        <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow>
+             <LeafMaterial color="#8b5a2b" uWindStrength={0.0} vertexColors />
+             {fallenData.map((data, i) => (
+                 <Instance
+                    key={`fallen-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                 />
+             ))}
+        </Instances>
 
         {/* Grass Instances */}
         <Instances range={grassData.length} geometry={grassGeo} castShadow receiveShadow>
@@ -232,8 +281,8 @@ const ForestFloor = () => {
                     rotation={data.rotation}
                     scale={data.scale}
                     color={data.color}
-                />
-            ))}
+                 />
+             ))}
         </Instances>
 
         {/* Fern Instances */}
