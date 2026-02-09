@@ -1,6 +1,5 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, Sparkles, Cloud } from '@react-three/drei'
-import { EffectComposer, Bloom, Noise, Vignette, DepthOfField } from '@react-three/postprocessing'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
@@ -26,7 +25,7 @@ const Scene = ({ audioStarted }) => {
       style={{ background: '#051605' }} // Deep forest dark green
     >
       {/* Fog for depth and atmosphere - adjusted for denser, moodier feel */}
-      <fog attach="fog" args={['#051510', 10, 150]} />
+      <fog attach="fog" args={['#051510', 20, 180]} />
 
       <AudioController started={audioStarted} />
 
@@ -91,13 +90,6 @@ const Scene = ({ audioStarted }) => {
         color="#000000"
       />
 
-      {/* Post Processing for Realism */}
-      <EffectComposer disableNormalPass>
-        <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} height={480} />
-        <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} height={300} intensity={0.5} />
-        <Noise opacity={0.025} />
-        <Vignette eskil={false} offset={0.1} darkness={0.9} />
-      </EffectComposer>
     </Canvas>
   )
 }

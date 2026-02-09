@@ -34,10 +34,10 @@ const CameraController = () => {
       const deltaY = (e.clientY - lastMouseY.current) * 0.1
 
       // Dragging moves the camera in X and Z
-      // Drag left/right -> Move X (inverted for drag feel)
-      cameraX.current -= deltaX
-      // Drag up/down -> Move Z (inverted)
-      cameraZ.current -= deltaY
+      // Drag left/right -> Move X (Standard Push/Drone controls)
+      cameraX.current += deltaX
+      // Drag up/down -> Move Z (Standard Push/Drone controls)
+      cameraZ.current += deltaY
 
       // Clamp to world bounds (-200 to 200)
       cameraX.current = Math.min(Math.max(cameraX.current, -200), 200)
@@ -67,8 +67,8 @@ const CameraController = () => {
       const deltaX = (clientX - lastMouseX.current) * 0.1
       const deltaY = (clientY - lastMouseY.current) * 0.1
 
-      cameraX.current -= deltaX
-      cameraZ.current -= deltaY
+      cameraX.current += deltaX
+      cameraZ.current += deltaY
 
       cameraX.current = Math.min(Math.max(cameraX.current, -200), 200)
       cameraZ.current = Math.min(Math.max(cameraZ.current, -200), 200)
@@ -106,21 +106,16 @@ const CameraController = () => {
     state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, cameraY.current, 0.05)
     state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, cameraZ.current, 0.05)
 
-    // Look at target logic
-    // We want to look slightly ahead in the direction of "forward" (usually -Z in Three.js, but here Z changes)
-    // Actually, let's just look slightly down from current position.
-
-    target.current.x = state.camera.position.x
-    target.current.y = state.camera.position.y * 0.8 // Look slightly down
-    target.current.z = state.camera.position.z - 10 // Look forward (negative Z is forward in default camera, but we are moving freely)
-
-    // For a top-down-ish view, maybe just look at [x, y-offset, z-offset]
-    // Let's keep it simple: Look at a point slightly in front and below.
+    // Dynamic pitch based on altitude
+    // At low altitude (y=1), we look forward (z-20) for immersion (horizon view).
+    // At high altitude (y=40), we look closer to vertical (z-5) for map view.
+    const t = THREE.MathUtils.clamp((state.camera.position.y - 1) / 39, 0, 1)
+    const lookOffsetZ = THREE.MathUtils.lerp(-20, -5, t)
 
     target.current.set(
         state.camera.position.x,
         Math.max(0, state.camera.position.y - 5), // Look at ground or lower
-        state.camera.position.z - 5
+        state.camera.position.z + lookOffsetZ
     )
 
     state.camera.lookAt(target.current)
