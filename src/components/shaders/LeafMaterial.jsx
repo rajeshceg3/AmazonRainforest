@@ -2,17 +2,15 @@ import React, { useRef, useLayoutEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.5, ...props }) {
+export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, ...props }) {
   const materialRef = useRef()
 
-  // Uniforms must be stable ref
   const uniforms = useRef({
     uTime: { value: 0 },
     uWindStrength: { value: uWindStrength },
     uWindSpeed: { value: uWindSpeed }
   })
 
-  // Update uniforms when props change
   useLayoutEffect(() => {
     if (uniforms.current) {
       uniforms.current.uWindStrength.value = uWindStrength
@@ -25,65 +23,15 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.5, ...props }
 
     const material = materialRef.current
 
-    // We need to patch the shader before compilation
     material.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = uniforms.current.uTime
       shader.uniforms.uWindStrength = uniforms.current.uWindStrength
       shader.uniforms.uWindSpeed = uniforms.current.uWindSpeed
 
-      // --- Vertex Shader ---
-      shader.vertexShader = `
-uniform float uTime;
-uniform float uWindStrength;
-uniform float uWindSpeed;
-` + shader.vertexShader
-
-      // Inject wind logic into the vertex shader
-      shader.vertexShader = shader.vertexShader.replace(
-        '#include <begin_vertex>',
-        `
-        #include <begin_vertex>
-
-        // Calculate world position proxy for wind phase
-        vec3 worldPosProxy = vec3(0.0);
-
-        #ifdef USE_INSTANCING
-          // instanceMatrix is an attribute containing the transform for this instance
-          // modelMatrix is a uniform containing the transform for the InstancedMesh
-          // We transform (0,0,0) local to world
-          worldPosProxy = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-        #else
-          worldPosProxy = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-        #endif
-
-        // Wind phase based on position and time
-        float windPhase = uTime * uWindSpeed + worldPosProxy.x * 0.05 + worldPosProxy.z * 0.05;
-
-        // Complex wind wave
-        float wind = sin(windPhase) + cos(windPhase * 2.3) * 0.5;
-        wind *= uWindStrength;
-
-        // Apply wind to the vertex 'transformed' (which is local position)
-        // We assume the leaf pivot is at y=0, so deformation increases with y
-        // If the geometry is centered, we might need to adjust.
-        // Assuming we build geometry where y=0 is the stem.
-
-        float bend = wind * pow(max(0.0, position.y + 0.5), 2.0) * 0.2;
-
-        transformed.x += bend;
-        transformed.z += bend * 0.5;
-
-        // Add some high frequency flutter
-        float flutter = sin(uTime * 10.0 + position.x * 20.0) * 0.05 * position.y;
-        transformed.y += flutter;
-        `
-      )
-
-      // --- Fragment Shader ---
-      // Inject Simplex Noise Function
-      shader.fragmentShader = `
-        vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
-        float snoise(vec2 v){
+      // Common Noise Function (2D)
+      const noiseFunc = `
+        vec3 leaf_permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+        float leaf_snoise(vec2 v){
           const vec4 C = vec4(0.211324865405187, 0.366025403784439,
                    -0.577350269189626, 0.024390243902439);
           vec2 i  = floor(v + dot(v, C.yy) );
@@ -93,7 +41,7 @@ uniform float uWindSpeed;
           vec4 x12 = x0.xyxy + C.xxzz;
           x12.xy -= i1;
           i = mod(i, 289.0);
-          vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+          vec3 p = leaf_permute( leaf_permute( i.y + vec3(0.0, i1.y, 1.0 ))
           + i.x + vec3(0.0, i1.x, 1.0 ));
           vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
           m = m*m ;
@@ -108,6 +56,56 @@ uniform float uWindSpeed;
           g.yz = a0.yz * x12.xz + h.yz * x12.yw;
           return 130.0 * dot(m, g);
         }
+      `
+
+      // --- Vertex Shader Injection ---
+      shader.vertexShader = `
+        uniform float uTime;
+        uniform float uWindStrength;
+        uniform float uWindSpeed;
+
+        ${noiseFunc}
+      ` + shader.vertexShader
+
+      // Inject Wind Logic
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `
+        #include <begin_vertex>
+
+        // Get world position of the instance/object
+        vec3 worldPos = (modelMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        #ifdef USE_INSTANCING
+          worldPos = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        #endif
+
+        // Noise inputs (Use XZ and Time)
+        float time = uTime * uWindSpeed;
+
+        // Large scale wind gusts (low frequency)
+        float gust = leaf_snoise(worldPos.xz * 0.02 + vec2(time * 0.2, 0.0));
+        gust = smoothstep(-0.2, 0.8, gust);
+
+        // Small scale flutter (high frequency)
+        float flutter = leaf_snoise(worldPos.xz * 0.5 + vec2(time * 1.5, 0.0));
+
+        // Combined wind force
+        float wind = (gust * 0.8 + flutter * 0.2) * uWindStrength;
+
+        // Apply deformation
+        float bendFactor = pow(max(0.0, position.y + 0.2), 1.5);
+
+        // Direction: approximate diagonal
+        vec3 windDir = normalize(vec3(1.0, 0.2, 0.5));
+
+        transformed += windDir * wind * bendFactor * 0.5;
+        transformed.x += flutter * bendFactor * 0.1;
+        `
+      )
+
+      // --- Fragment Shader Injection ---
+      shader.fragmentShader = `
+        ${noiseFunc}
       ` + shader.fragmentShader
 
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -115,45 +113,25 @@ uniform float uWindSpeed;
         `
         #include <color_fragment>
 
-        // Leaf Texture / Variation
-        // Use vUv if available, otherwise screen position or something else?
-        // Standard Material usually has vUv if USE_UV is defined.
-
         #ifdef USE_UV
-          float n = snoise(vUv * 5.0);
-          float vein = snoise(vUv * 20.0);
+            // Organic variation
+            float n = leaf_snoise(vUv * 10.0);
 
-          // Base variation
-          diffuseColor.rgb *= (0.9 + 0.2 * n);
+            // Subtle vein pattern
+            float vein = smoothstep(0.4, 0.5, abs(n));
+            diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.8, vein * 0.3);
 
-          // Veins (subtle)
-          diffuseColor.rgb *= (0.95 + 0.1 * vein);
+            // Soft Edge Alpha
+            float dist = distance(vUv, vec2(0.5));
+            float edgeNoise = leaf_snoise(vUv * 20.0) * 0.05;
+            float alphaMask = 1.0 - smoothstep(0.4, 0.5, dist + edgeNoise * 0.2);
 
-          // Darker center/stem (approx)
-          float dist = abs(vUv.x - 0.5);
-          diffuseColor.rgb *= (1.0 - dist * 0.3);
-
-          // --- SOFT EDGE MASK ---
-          // Smoothstep edges to avoid hard polygons
-          // We apply a soft alpha fade at the edges of the UV space
-          float edgeWidth = 0.08;
-          float alphaX = smoothstep(0.0, edgeWidth, vUv.x) * smoothstep(1.0, 1.0 - edgeWidth, vUv.x);
-          float alphaY = smoothstep(0.0, edgeWidth, vUv.y) * smoothstep(1.0, 1.0 - edgeWidth, vUv.y);
-
-          // Combine
-          diffuseColor.a *= alphaX * alphaY;
+            diffuseColor.a *= alphaMask;
         #endif
 
-        // Simple Subsurface Scattering Approximation (Backlighting)
-        // Check if light is behind the leaf relative to camera
-        // Using view vector and normal
-
-        // This is a rough hack in Forward rendering without custom uniforms for light dir
-        // But we can simulate "translucency" by brightening the backface
-
         if (!gl_FrontFacing) {
-            diffuseColor.rgb *= 1.3; // Make backface brighter (simulating light passing through)
-            diffuseColor.rgb += vec3(0.1, 0.2, 0.0); // Add some green tint
+            diffuseColor.rgb *= 1.5;
+            diffuseColor.rgb += vec3(0.15, 0.2, 0.05);
         }
         `
       )
@@ -174,7 +152,7 @@ uniform float uWindSpeed;
       side={THREE.DoubleSide}
       transparent
       alphaTest={0.5}
-      defines={{ USE_UV: '' }} // Force UVs
+      defines={{ USE_UV: '' }}
       {...props}
     />
   )

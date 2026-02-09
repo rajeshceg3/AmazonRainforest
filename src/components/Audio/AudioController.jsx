@@ -12,6 +12,7 @@ const AudioController = ({ started }) => {
     // Initialize the SoundscapeManager
     if (!managerRef.current) {
         managerRef.current = new SoundscapeManager()
+        window.soundscapeManager = managerRef.current
     }
 
     return () => {
@@ -19,13 +20,14 @@ const AudioController = ({ started }) => {
       if (managerRef.current) {
         managerRef.current.dispose()
         managerRef.current = null
+        window.soundscapeManager = null
       }
     }
   }, [started])
 
   useFrame(() => {
     if (managerRef.current) {
-      managerRef.current.update(camera.position.y)
+      managerRef.current.update(camera.position)
     }
   })
 

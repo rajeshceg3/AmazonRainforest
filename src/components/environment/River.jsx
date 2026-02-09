@@ -8,11 +8,16 @@ import * as THREE from 'three'
 const River = () => {
   const baseNormalMap = useWaterNormals(512)
   const normalMap = useMemo(() => baseNormalMap.clone(), [baseNormalMap])
+  const distortionMap = useMemo(() => baseNormalMap.clone(), [baseNormalMap])
 
   useFrame((state, delta) => {
     // Animate texture offset for flow
     normalMap.offset.x += delta * 0.05
     normalMap.offset.y += delta * 0.02
+
+    // Animate distortion map in opposite direction for turbulence
+    distortionMap.offset.x -= delta * 0.02
+    distortionMap.offset.y -= delta * 0.01
   })
 
   return (
@@ -36,7 +41,7 @@ const River = () => {
           maxDepthThreshold={1.4} // Upper edge for the depthTexture interpolation (default = 0)
           depthToBlurRatioBias={0.25} // Adds a bias factor to the depthTexture before calculating the blur amount [blurFactor = blurTexture * (depthTexture + bias)]. It accepts values between 0 and 1, default is 0.25. An amount > 0 of bias makes sure that the blurTexture is not too sharp at the edges of the screen reflection
           distortion={1.0} // Amount of distortion based on the distortionMap texture
-          distortionMap={normalMap} // Use the same noise texture for distortion
+          distortionMap={distortionMap} // Use independent texture for distortion
           debug={0} /* Depending on the assigned value, one of the following channels is shown:
             0 = no debug
             1 = depth channel

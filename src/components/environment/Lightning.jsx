@@ -22,26 +22,34 @@ const Lightning = () => {
             // Schedule next flash: 60s to 120s interval (Rare)
             nextFlashTime.current = time + 60 + Math.random() * 60
         } else {
-            // Flash intensity curve: sudden spike then decay
-            // Maybe a flicker?
-            // Let's do a simple decay for now
+            // Flicker Logic
             const progress = elapsed / flashDuration
-            // flickering random factor
-            const flicker = Math.random() > 0.5 ? 1 : 0.5
-            light.current.intensity = 800 * (1 - progress) * flicker
+            let intensity = 800 * (1.0 - progress)
+
+            // Hard coded flicker pattern for realism (Flash -> dim -> Flash -> fade)
+            if (progress > 0.15 && progress < 0.25) intensity *= 0.1
+            if (progress > 0.35 && progress < 0.45) intensity *= 1.2
+
+            light.current.intensity = intensity
         }
     } else {
         if (time >= nextFlashTime.current) {
             isFlashing.current = true
             flashStartTime.current = time
+
+            // Randomize position
+            const x = (Math.random() - 0.5) * 300
+            const y = 100 + Math.random() * 50
+            const z = (Math.random() - 0.5) * 300
+
+            light.current.position.set(x, y, z)
             light.current.intensity = 800
 
-            // Randomize position in the sky
-            light.current.position.set(
-                (Math.random() - 0.5) * 300,
-                100 + Math.random() * 50, // High up
-                (Math.random() - 0.5) * 300
-            )
+            // Trigger Sound
+            const dist = state.camera.position.distanceTo(light.current.position)
+            if (window.soundscapeManager && window.soundscapeManager.triggerThunder) {
+                window.soundscapeManager.triggerThunder(dist)
+            }
         }
     }
   })
