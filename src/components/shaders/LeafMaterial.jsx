@@ -132,6 +132,16 @@ uniform float uWindSpeed;
           // Darker center/stem (approx)
           float dist = abs(vUv.x - 0.5);
           diffuseColor.rgb *= (1.0 - dist * 0.3);
+
+          // --- SOFT EDGE MASK ---
+          // Smoothstep edges to avoid hard polygons
+          // We apply a soft alpha fade at the edges of the UV space
+          float edgeWidth = 0.08;
+          float alphaX = smoothstep(0.0, edgeWidth, vUv.x) * smoothstep(1.0, 1.0 - edgeWidth, vUv.x);
+          float alphaY = smoothstep(0.0, edgeWidth, vUv.y) * smoothstep(1.0, 1.0 - edgeWidth, vUv.y);
+
+          // Combine
+          diffuseColor.a *= alphaX * alphaY;
         #endif
 
         // Simple Subsurface Scattering Approximation (Backlighting)
