@@ -271,20 +271,61 @@ class RainLayer {
   }
 }
 
+// --- Cicada Layer ---
+// Rhythmic high pitched buzzing
+class CicadaLayer {
+    constructor(outputNode) {
+        this.output = outputNode
+        this.panner = new Tone.Panner(0).connect(this.output)
+
+        // Filtered Noise
+        this.filter = new Tone.Filter(4000, "bandpass", -24).connect(this.panner)
+        this.noise = new Tone.Noise("pink").connect(this.filter)
+        this.noise.volume.value = -30
+        this.noise.start()
+
+        // LFO for rhythm
+        this.lfo = new Tone.LFO(15, -40, -25).connect(this.noise.volume).start()
+    }
+
+    update(pos, time) {
+        // Cicadas are louder in the trees (y > 5)
+        const intensity = Math.min(1, Math.max(0, (pos.y - 5) / 20))
+        this.lfo.max = -25 * intensity - 30 * (1-intensity) // Louder when high
+        this.lfo.min = -40 * intensity - 60 * (1-intensity)
+
+        // Randomly change LFO rate for variety
+        if(Math.random() > 0.99) {
+            this.lfo.frequency.rampTo(10 + Math.random() * 20, 2)
+        }
+    }
+
+    dispose() {
+        this.noise.dispose()
+        this.filter.dispose()
+        this.lfo.dispose()
+        this.panner.dispose()
+    }
+}
+
 // --- Creature Manager ---
 class CreatureManager {
   constructor(outputNode) {
     this.output = outputNode
 
-    // 1. Birds (AM/FM Synth)
+    // 1. Birds (FM Synth for more realistic chirp)
     this.birdPanner = new Tone.Panner3D(0, 0, 0).connect(this.output)
 
-    // PolySynth for multiple birds? No, single bird logic is simpler for Panner3D
-    this.birdSynth = new Tone.Synth({
+    this.birdSynth = new Tone.FMSynth({
+        harmonicity: 3,
+        modulationIndex: 10,
+        detune: 0,
         oscillator: { type: "sine" },
-        envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+        envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 },
+        modulation: { type: "square" },
+        modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 }
     }).connect(this.birdPanner)
-    this.birdSynth.volume.value = -15
+    this.birdSynth.volume.value = -12
 
     // 2. Insects
     this.insectFilter = new Tone.Filter(9000, "highpass").connect(this.output)
@@ -413,6 +454,7 @@ export class SoundscapeManager {
     this.canopy = new CanopyLayer(this.reverb)
     this.wood = new WoodLayer(this.reverb)
     this.rain = new RainLayer(this.reverb)
+    this.cicadas = new CicadaLayer(this.reverb)
     this.creatures = new CreatureManager(this.reverb)
     this.ambience = new AmbienceLayer(this.reverb)
     this.wind = new WindLayer(this.reverb)
@@ -444,6 +486,7 @@ export class SoundscapeManager {
     this.canopy.update(p, time)
     this.wood.update(p, time)
     this.rain.update(p) // Rain is ubiquitous
+    this.cicadas.update(p, time)
     this.creatures.update(p, time)
     this.ambience.update(p, time)
     this.wind.update(p, time)
@@ -474,6 +517,7 @@ export class SoundscapeManager {
     this.canopy.dispose()
     this.wood.dispose()
     this.rain.dispose()
+    this.cicadas.dispose()
     this.creatures.dispose()
     this.ambience.dispose()
     this.wind.dispose()

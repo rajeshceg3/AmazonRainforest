@@ -141,14 +141,50 @@ const useFallenLeafGeometry = () => {
     }, [])
 }
 
+const useBroadleafGeometry = () => {
+    return useMemo(() => {
+        // Large Alocasia-like leaf
+        const geometry = new THREE.PlaneGeometry(1.0, 1.5, 6, 8)
+        geometry.translate(0, 0.75, 0) // Pivot at bottom
+
+        const pos = geometry.attributes.position
+        const v = new THREE.Vector3()
+
+        for(let i=0; i<pos.count; i++){
+             v.fromBufferAttribute(pos, i)
+             const yNorm = v.y / 1.5
+
+             // Heart shape / Shield shape
+             // Wider near bottom/middle, taper to point at top
+             const shape = Math.sin(Math.pow(yNorm, 0.6) * Math.PI)
+             v.x *= (shape * 1.2 + 0.2) // Maintain some width
+
+             // Center depression (vein)
+             v.z -= Math.abs(v.x) * 0.3
+
+             // Bend back overall
+             v.z += Math.pow(yNorm, 1.8) * 0.8
+
+             // Random waviness
+             v.z += Math.sin(v.x * 3.0 + v.y * 2.0) * 0.1
+
+             pos.setXYZ(i, v.x, v.y, v.z)
+        }
+        geometry.computeVertexNormals()
+        return geometry
+    }, [])
+}
+
 const ForestFloor = () => {
   const fernCount = 2000
   const grassCount = 30000
   const fallenLeafCount = 2000
+  const broadleafCount = 600
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
   const fallenGeo = useFallenLeafGeometry()
+  const broadleafGeo = useBroadleafGeometry()
 
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
@@ -226,6 +262,35 @@ const ForestFloor = () => {
       return data
   }, [fernCount])
 
+  const broadleafData = useMemo(() => {
+      const data = []
+      const baseColor = new THREE.Color("#3a5f2d") // Slightly lighter/yellower green
+
+      for(let i=0; i<broadleafCount; i++) {
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          // Prefer lower areas near water, but not submerged
+          if (h < -0.2 || h > 10) continue;
+
+          // Clumping
+          const density = Math.sin(x * 0.1 + 5) * Math.cos(z * 0.1 + 5)
+          if (density < 0.0) continue; // Sparse clumps
+
+          const color = baseColor.clone()
+          color.offsetHSL((Math.random() - 0.5) * 0.05, 0, (Math.random() - 0.5) * 0.1)
+
+          data.push({
+              position: [x, h, z],
+              rotation: [0, Math.random() * Math.PI * 2, 0],
+              scale: [0.8 + Math.random() * 0.6, 0.8 + Math.random() * 0.6, 0.8 + Math.random() * 0.6],
+              color: color
+          })
+      }
+      return data
+  }, [broadleafCount])
+
   const fallenData = useMemo(() => {
       const data = []
       const baseColor = new THREE.Color("#8b5a2b")
@@ -291,6 +356,20 @@ const ForestFloor = () => {
              {fernData.map((data, i) => (
                  <Instance
                     key={`fern-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                 />
+             ))}
+        </Instances>
+
+        {/* Broadleaf Instances */}
+        <Instances range={broadleafData.length} geometry={broadleafGeo} castShadow receiveShadow>
+             <LeafMaterial color="#3a5f2d" uWindStrength={0.4} uWindSpeed={0.7} vertexColors />
+             {broadleafData.map((data, i) => (
+                 <Instance
+                    key={`broadleaf-${i}`}
                     position={data.position}
                     rotation={data.rotation}
                     scale={data.scale}
