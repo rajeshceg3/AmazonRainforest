@@ -23,15 +23,10 @@ const useFernGeometry = () => {
 
         // Taper width: wider at 0.2, zero at 1.0
         // Base width (y=0) is 0.3.
-        // Let's make it oval-ish.
-        // const widthScale = Math.sin(Math.acos(Math.abs(yNorm * 2 - 1))) // Circular profile?
-        // Or simple taper:
         const taper = 1.0 - Math.pow(yNorm, 1.5)
         v.x *= taper
 
         // Curl: Bend backwards (Z)
-        // Frond curls out and down slightly?
-        // Let's curve it like a fern: )
         const curve = Math.pow(yNorm, 2.0) * 0.5
         v.z += curve // Bend backward relative to front face
 
@@ -127,14 +122,34 @@ const useGrassGeometry = () => {
 
 const useFallenLeafGeometry = () => {
     return useMemo(() => {
-        const geometry = new THREE.PlaneGeometry(0.3, 0.4, 2, 2)
+        // Increased resolution for shaping
+        const geometry = new THREE.PlaneGeometry(0.3, 0.4, 4, 6)
         const pos = geometry.attributes.position
+        const v = new THREE.Vector3()
+
         for(let i=0; i<pos.count; i++){
-            // Random crunch?
-            const z = pos.getZ(i)
-            // Curl
-            const x = pos.getX(i)
-            pos.setZ(i, z + Math.pow(x*2.0, 2.0)*0.1 + (Math.random()-0.5)*0.05)
+            v.fromBufferAttribute(pos, i)
+
+            // Normalize coordinates for shaping logic (assuming centered at 0,0)
+            // x from -0.15 to 0.15, y from -0.2 to 0.2
+
+            // Simple oval shape
+            // Normalize Y to -1 to 1 range
+            const yNorm = v.y / 0.2
+
+            // Width factor: cos-ish shape
+            const widthScale = Math.sqrt(1.0 - Math.pow(yNorm, 2)) * 1.0
+
+            // Apply width taper
+            // Handle edge cases where sqrt might be NaN if > 1 due to float precision
+            const safeWidth = isNaN(widthScale) ? 0 : widthScale
+            v.x *= safeWidth
+
+            // Random crumple/curl
+            const z = v.z
+            v.z = z + Math.pow(v.x*3.0, 2.0)*0.1 + (Math.random()-0.5)*0.03 + Math.sin(v.y * 5.0) * 0.05
+
+            pos.setXYZ(i, v.x, v.y, v.z)
         }
         geometry.computeVertexNormals()
         return geometry
@@ -144,7 +159,8 @@ const useFallenLeafGeometry = () => {
 const useBroadleafGeometry = () => {
     return useMemo(() => {
         // Large Alocasia-like leaf
-        const geometry = new THREE.PlaneGeometry(1.0, 1.5, 6, 8)
+        // Increased resolution
+        const geometry = new THREE.PlaneGeometry(1.0, 1.5, 8, 12)
         geometry.translate(0, 0.75, 0) // Pivot at bottom
 
         const pos = geometry.attributes.position
@@ -176,10 +192,10 @@ const useBroadleafGeometry = () => {
 }
 
 const ForestFloor = () => {
-  const fernCount = 2000
-  const grassCount = 30000
-  const fallenLeafCount = 2000
-  const broadleafCount = 600
+  const fernCount = 1000
+  const grassCount = 10000
+  const fallenLeafCount = 1000
+  const broadleafCount = 300
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
@@ -324,7 +340,7 @@ const ForestFloor = () => {
 
         {/* Fallen Leaves */}
         <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow>
-             <LeafMaterial color="#8b5a2b" uWindStrength={0.0} vertexColors />
+             <LeafMaterial color="#8b5a2b" uWindStrength={0.0} uUseAlphaMask={1.0} />
              {fallenData.map((data, i) => (
                  <Instance
                     key={`fallen-${i}`}
@@ -338,7 +354,7 @@ const ForestFloor = () => {
 
         {/* Grass Instances */}
         <Instances range={grassData.length} geometry={grassGeo} castShadow receiveShadow>
-            <LeafMaterial color="#4a6f1b" uWindStrength={0.3} uWindSpeed={1.0} vertexColors />
+            <LeafMaterial color="#4a6f1b" uWindStrength={0.3} uWindSpeed={1.0} uUseAlphaMask={0.0} />
             {grassData.map((data, i) => (
                 <Instance
                     key={`grass-${i}`}
@@ -352,7 +368,7 @@ const ForestFloor = () => {
 
         {/* Fern Instances */}
         <Instances range={fernData.length} geometry={fernGeo} castShadow receiveShadow>
-             <LeafMaterial color="#2d5a27" uWindStrength={0.2} uWindSpeed={0.8} vertexColors />
+             <LeafMaterial color="#2d5a27" uWindStrength={0.2} uWindSpeed={0.8} uUseAlphaMask={0.0} />
              {fernData.map((data, i) => (
                  <Instance
                     key={`fern-${i}`}
@@ -366,7 +382,7 @@ const ForestFloor = () => {
 
         {/* Broadleaf Instances */}
         <Instances range={broadleafData.length} geometry={broadleafGeo} castShadow receiveShadow>
-             <LeafMaterial color="#3a5f2d" uWindStrength={0.4} uWindSpeed={0.7} vertexColors />
+             <LeafMaterial color="#3a5f2d" uWindStrength={0.4} uWindSpeed={0.7} uUseAlphaMask={1.0} />
              {broadleafData.map((data, i) => (
                  <Instance
                     key={`broadleaf-${i}`}

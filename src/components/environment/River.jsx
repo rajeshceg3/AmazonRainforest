@@ -28,9 +28,9 @@ const River = () => {
           envMapIntensity={0}
           normalMap={normalMap}
           normalScale={[0.5, 0.5]}
-          color="#0a2a1a" // Rich teal/green
-          roughness={0.6}
-          blur={[400, 200]} // Blur ground reflections (width, height), 0 skips blur
+          color="#1a120b" // Dark tannin brown/black
+          roughness={0.7}
+          blur={[600, 300]} // Blur ground reflections (width, height), 0 skips blur
           mixBlur={2.0} // How much blur mixes with surface roughness (default = 1)
           mixStrength={1.5} // Strength of the reflection
           mixContrast={1} // Contrast of the reflection
@@ -40,7 +40,7 @@ const River = () => {
           minDepthThreshold={0.4} // Lower edge for the depthTexture interpolation (default = 0)
           maxDepthThreshold={1.4} // Upper edge for the depthTexture interpolation (default = 0)
           depthToBlurRatioBias={0.25} // Adds a bias factor to the depthTexture before calculating the blur amount [blurFactor = blurTexture * (depthTexture + bias)]. It accepts values between 0 and 1, default is 0.25. An amount > 0 of bias makes sure that the blurTexture is not too sharp at the edges of the screen reflection
-          distortion={1.0} // Amount of distortion based on the distortionMap texture
+          distortion={1.2} // Amount of distortion based on the distortionMap texture
           distortionMap={distortionMap} // Use independent texture for distortion
           debug={0} /* Depending on the assigned value, one of the following channels is shown:
             0 = no debug
