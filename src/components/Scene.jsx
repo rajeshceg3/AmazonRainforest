@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, Sparkles, Cloud } from '@react-three/drei'
+import { EffectComposer, Bloom, DepthOfField, Vignette, Noise } from '@react-three/postprocessing'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
@@ -89,6 +90,20 @@ const Scene = ({ audioStarted }) => {
         resolution={512}
         color="#000000"
       />
+
+      <EffectComposer disableNormalPass>
+        {/* Depth of Field for cinematic look - Focuses around 15-20 units away */}
+        <DepthOfField focusDistance={0.015} focalLength={0.02} bokehScale={2} height={480} />
+
+        {/* Bloom for fireflies and sun glints */}
+        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} height={300} intensity={0.5} />
+
+        {/* Subtle Noise for organic film grain texture */}
+        <Noise opacity={0.02} />
+
+        {/* Vignette to focus attention */}
+        <Vignette eskil={false} offset={0.1} darkness={0.6} />
+      </EffectComposer>
 
     </Canvas>
   )

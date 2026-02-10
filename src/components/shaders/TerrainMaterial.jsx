@@ -62,15 +62,39 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
       ` + shader.fragmentShader
 
       shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <normal_fragment_begin>',
+        `
+        #include <normal_fragment_begin>
+
+        // Generate height for bump mapping
+        float h_n = snoise(vUv * 20.0);
+        float h_n2 = snoise(vUv * 100.0);
+        float h = h_n * 0.5 + h_n2 * 0.2;
+
+        // Calculate derivatives for normal perturbation
+        float dHx = dFdx(h);
+        float dHy = dFdy(h);
+
+        // Perturb normal (view space)
+        vec3 surfGrad = vec3(dHx, dHy, 0.0);
+
+        // Strength of bump
+        float bumpScale = 5.0;
+
+        // Apply to normal (approximate view space perturbation)
+        normal.x -= dHx * bumpScale;
+        normal.y -= dHy * bumpScale;
+        normal = normalize(normal);
+        `
+      )
+
+      shader.fragmentShader = shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
         #include <map_fragment>
 
-        // Noise Generation
-        // Use vUv * 20.0 as base frequency for 400x400 plane (approx 0.05 units freq)
+        // Re-calculate noise for color (compiler will optimize if identical)
         float n = snoise(vUv * 20.0);
-
-        // Detail noise (grit)
         float n2 = snoise(vUv * 100.0);
 
         // Mix factor for soil/moss

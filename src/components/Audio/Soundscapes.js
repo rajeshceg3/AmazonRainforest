@@ -50,13 +50,17 @@ class WindLayer {
     this.panner.pan.rampTo(pan, 0.1)
 
     // Gusts
-    if (time - this.lastGustTime > 10 + Math.random() * 10) {
-        if (Math.random() > 0.5) {
+    if (time - this.lastGustTime > 5 + Math.random() * 8) {
+        if (Math.random() > 0.4) {
             // Gust duration
-            const dur = 2 + Math.random() * 3
+            const dur = 3 + Math.random() * 5
             // Gust volume
-            const gustVol = baseVol - 5
+            const gustVol = baseVol + (Math.random() * 5) // Can be louder than base
             this.gustNoise.volume.rampTo(gustVol, dur/2)
+
+            // Pan gusts
+            this.panner.pan.rampTo((Math.random() - 0.5) * 0.8, dur)
+
             setTimeout(() => {
                 this.gustNoise.volume.rampTo(-60, dur/2)
             }, dur * 1000 / 2)
@@ -327,6 +331,14 @@ class CreatureManager {
     }).connect(this.birdPanner)
     this.birdSynth.volume.value = -12
 
+    // 2. Flyby (Wing beats / Swoosh)
+    this.flybyPanner = new Tone.Panner3D(0,0,0).connect(this.output)
+    this.flybySynth = new Tone.NoiseSynth({
+        noise: { type: "brown" },
+        envelope: { attack: 0.5, decay: 0.5, sustain: 0 }
+    }).connect(this.flybyPanner)
+    this.flybySynth.volume.value = -20
+
     // 2. Insects
     this.insectFilter = new Tone.Filter(9000, "highpass").connect(this.output)
     this.insectOsc = new Tone.Oscillator(12000, "sawtooth").connect(this.insectFilter).start()
@@ -344,6 +356,7 @@ class CreatureManager {
 
     this.lastBirdTime = 0
     this.lastFrogTime = 0
+    this.lastFlybyTime = 0
   }
 
   update(pos, time) {
@@ -353,8 +366,8 @@ class CreatureManager {
     Tone.Listener.positionZ.value = pos.z
 
     // Birds
-    if (time - this.lastBirdTime > 5 + Math.random() * 10) { // 5-15s interval
-      if (Math.random() > 0.4) {
+    if (time - this.lastBirdTime > 4 + Math.random() * 8) { // More frequent
+      if (Math.random() > 0.3) {
         // Random Position around listener
         const angle = Math.random() * Math.PI * 2
         const dist = 10 + Math.random() * 20
@@ -368,24 +381,51 @@ class CreatureManager {
 
         // Pitch variation
         // Base C6 (approx 1046Hz) +/- variation
-        const notes = ["C6", "E6", "G6", "A6", "C7"]
+        const notes = ["C6", "E6", "G6", "A6", "C7", "D6", "F6"]
         const note = notes[Math.floor(Math.random() * notes.length)]
+
+        // Randomize modulation index for timbre variety
+        this.birdSynth.modulationIndex.value = 5 + Math.random() * 15
 
         // Play pattern
         const pattern = Math.random()
-        if (pattern < 0.3) {
+        if (pattern < 0.25) {
             this.birdSynth.triggerAttackRelease(note, "16n", time)
-        } else if (pattern < 0.6) {
+        } else if (pattern < 0.5) {
              this.birdSynth.triggerAttackRelease(note, "32n", time)
              this.birdSynth.triggerAttackRelease(note, "32n", time + 0.1)
-        } else {
+        } else if (pattern < 0.75) {
              // Slide
              this.birdSynth.triggerAttackRelease(note, "8n", time)
              this.birdSynth.frequency.rampTo(Tone.Frequency(note).transpose(-2), 0.1, time)
+        } else {
+             // Triple chirp
+             this.birdSynth.triggerAttackRelease(note, "64n", time)
+             this.birdSynth.triggerAttackRelease(note, "64n", time + 0.05)
+             this.birdSynth.triggerAttackRelease(note, "64n", time + 0.1)
         }
 
         this.lastBirdTime = time
       }
+    }
+
+    // Flyby Effect
+    if (time - this.lastFlybyTime > 15 + Math.random() * 20) {
+        // Simulate a bird or large insect flying past
+        const startX = pos.x - 20
+        const endX = pos.x + 20
+        const y = pos.y + 5
+        const z = pos.z + (Math.random() - 0.5) * 10
+
+        // We can't easily animate Panner3D over time without a loop,
+        // but we can set a quick ramp if we had a dedicated "Flyby" class.
+        // For now, let's just trigger a sound at a random close location.
+        this.flybyPanner.positionX.value = pos.x + (Math.random()-0.5)*5
+        this.flybyPanner.positionY.value = pos.y + 2
+        this.flybyPanner.positionZ.value = pos.z + (Math.random()-0.5)*5
+
+        this.flybySynth.triggerAttackRelease("1n", time)
+        this.lastFlybyTime = time
     }
 
     // Insects (Louder in dense understory)
@@ -408,6 +448,8 @@ class CreatureManager {
   dispose() {
     this.birdSynth.dispose()
     this.birdPanner.dispose()
+    this.flybySynth.dispose()
+    this.flybyPanner.dispose()
     this.insectOsc.dispose()
     this.insectFilter.dispose()
     this.insectLFO.dispose()
@@ -443,6 +485,39 @@ class AmbienceLayer {
     }
 }
 
+// --- Movement Layer ---
+// Simulates brushing against foliage/footsteps based on speed
+class MovementLayer {
+    constructor(outputNode) {
+        this.output = outputNode
+        this.filter = new Tone.Filter(800, "lowpass").connect(this.output)
+        this.noise = new Tone.Noise("pink").connect(this.filter)
+        this.noise.volume.value = -100 // Silent initially
+        this.noise.start()
+    }
+
+    update(pos, time, speed) {
+        // Map speed (approx 0 to 20 units/sec) to volume
+        // Threshold: moving slowly doesn't make much noise
+        // Max volume: -15dB
+        if (speed > 0.1) {
+             const targetVol = THREE.MathUtils.mapLinear(Math.min(speed, 10), 0, 10, -50, -15)
+             this.noise.volume.rampTo(targetVol, 0.1)
+
+             // Modulate filter frequency with speed for "crunch"
+             const targetFreq = 400 + speed * 100
+             this.filter.frequency.rampTo(targetFreq, 0.1)
+        } else {
+             this.noise.volume.rampTo(-100, 0.2)
+        }
+    }
+
+    dispose() {
+        this.noise.dispose()
+        this.filter.dispose()
+    }
+}
+
 // --- Main Manager ---
 export class SoundscapeManager {
   constructor() {
@@ -458,6 +533,7 @@ export class SoundscapeManager {
     this.creatures = new CreatureManager(this.reverb)
     this.ambience = new AmbienceLayer(this.reverb)
     this.wind = new WindLayer(this.reverb)
+    this.movement = new MovementLayer(this.reverb)
 
     // Thunder Synth
     this.thunderSynth = new Tone.NoiseSynth({
@@ -476,7 +552,7 @@ export class SoundscapeManager {
     Tone.Transport.start()
   }
 
-  update(pos) {
+  update(pos, speed = 0) {
     // Ensure pos is Vector3 (it should be coming from AudioController)
     // If just number (legacy), map to Vector3
     const p = (typeof pos === 'number') ? new THREE.Vector3(0, pos, 0) : pos
@@ -490,6 +566,7 @@ export class SoundscapeManager {
     this.creatures.update(p, time)
     this.ambience.update(p, time)
     this.wind.update(p, time)
+    this.movement.update(p, time, speed)
   }
 
   triggerThunder(distance) {
@@ -521,6 +598,7 @@ export class SoundscapeManager {
     this.creatures.dispose()
     this.ambience.dispose()
     this.wind.dispose()
+    this.movement.dispose()
     this.thunderSynth.dispose()
     this.thunderRumble.dispose()
     this.reverb.dispose()

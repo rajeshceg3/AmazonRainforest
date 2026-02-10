@@ -192,10 +192,10 @@ const useBroadleafGeometry = () => {
 }
 
 const ForestFloor = () => {
-  const fernCount = 1000
-  const grassCount = 10000
-  const fallenLeafCount = 1000
-  const broadleafCount = 300
+  const fernCount = 1500
+  const grassCount = 15000
+  const fallenLeafCount = 2000
+  const broadleafCount = 500
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
@@ -234,7 +234,7 @@ const ForestFloor = () => {
 
           // Clumping: Use noise to skip some
           const density = Math.sin(x * 0.05) * Math.cos(z * 0.05)
-          if (density < -0.5) continue;
+          if (density < -0.3) continue;
 
           const color = baseColor.clone()
           color.offsetHSL((Math.random() - 0.5) * 0.1, 0, (Math.random() - 0.5) * 0.2)
@@ -263,7 +263,7 @@ const ForestFloor = () => {
 
           // Clumping
           const density = Math.sin(x * 0.08 + 10) * Math.cos(z * 0.08 + 10)
-          if (density < -0.2) continue;
+          if (density < -0.1) continue;
 
           const color = baseColor.clone()
           color.offsetHSL((Math.random() - 0.5) * 0.05, 0, (Math.random() - 0.5) * 0.15)
