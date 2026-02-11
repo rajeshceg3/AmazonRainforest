@@ -6,18 +6,51 @@ import { LeafMaterial } from '../shaders/LeafMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 const TreeConfig = {
-  count: 100,
+  count: 80,
   area: 400,
-  minHeight: 12,
-  maxHeight: 25,
+  minHeight: 15,
+  maxHeight: 35,
 }
 
-// Improved Trunk Geometry: High segmentation for shader displacement
+// Improved Trunk Geometry: High resolution with root flare and organic shaping
 const TrunkGeometry = () => {
     return useMemo(() => {
-        // Tapered cylinder: top radius 0.2, bottom 0.8, height 1 (scaled later), segments
-        const geo = new THREE.CylinderGeometry(0.2, 0.8, 1, 12, 16)
+        // High poly cylinder for vertex displacement
+        const geo = new THREE.CylinderGeometry(0.3, 0.7, 1, 32, 64)
         geo.translate(0, 0.5, 0) // Pivot at bottom
+
+        const pos = geo.attributes.position
+        const v = new THREE.Vector3()
+
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i)
+            const y = v.y // 0 to 1
+
+            // 1. Root Flare (Buttress roots)
+            const flarePower = Math.max(0, 1.0 - y * 5.0);
+            const flare = Math.pow(flarePower, 3.0) * 2.5;
+
+            const radius = Math.sqrt(v.x*v.x + v.z*v.z);
+            if (radius > 0.001) {
+                v.x += (v.x / radius) * flare * 0.5;
+                v.z += (v.z / radius) * flare * 0.5;
+            }
+
+            // 2. Organic Crookedness
+            const bendX = Math.sin(y * 3.0) * 0.3 * y;
+            const bendZ = Math.cos(y * 2.5) * 0.3 * y;
+            v.x += bendX;
+            v.z += bendZ;
+
+            // 3. Surface Noise
+            const noiseX = Math.sin(y * 20.0 + v.z * 10.0) * 0.02;
+            const noiseZ = Math.cos(y * 18.0 + v.x * 10.0) * 0.02;
+            v.x += noiseX;
+            v.z += noiseZ;
+
+            pos.setXYZ(i, v.x, v.y, v.z)
+        }
+        geo.computeVertexNormals()
         return geo
     }, [])
 }
@@ -26,50 +59,54 @@ const TrunkGeometry = () => {
 const LeafClusterGeometry = () => {
     return useMemo(() => {
         // Base leaf shape
-        const singleLeaf = new THREE.PlaneGeometry(0.8, 1.2, 2, 4)
-        singleLeaf.translate(0, 0.6, 0) // Pivot at bottom
+        const singleLeaf = new THREE.PlaneGeometry(1.2, 1.8, 3, 5) // Larger leaves
+        singleLeaf.translate(0, 0.9, 0) // Pivot at bottom
 
         const pos = singleLeaf.attributes.position
         const v = new THREE.Vector3()
 
-        // Bend the leaf to be less flat
+        // Bend the leaf
         for (let i = 0; i < pos.count; i++) {
             v.fromBufferAttribute(pos, i)
-            const bend = Math.pow(Math.max(0, v.y), 1.5) * 0.5
-            v.z += bend
-            v.x *= (1.2 - v.y * 0.5) // Taper
+            const yNorm = v.y / 1.8;
+            const droop = Math.pow(yNorm, 2.0) * 0.5;
+            v.z += droop;
+            v.x *= (1.0 - Math.pow(yNorm, 2.0) * 0.5);
             pos.setXYZ(i, v.x, v.y, v.z)
         }
         singleLeaf.computeVertexNormals()
 
         const cluster = new THREE.BufferGeometry()
-        const leafCount = 12
+        const leafCount = 16
         const geometries = []
+        const dummy = new THREE.Object3D()
 
         for(let i=0; i<leafCount; i++) {
             const leaf = singleLeaf.clone()
 
-            // Distribute leaves in a semi-sphere or branch-like pattern
-            const angle = (i / leafCount) * Math.PI * 2 + (Math.random() - 0.5)
-            const height = Math.random() * 0.5
-            const radius = Math.random() * 0.5
+            // Fibonacci sphere distribution roughly
+            const phi = Math.acos(1 - 2 * (i + 0.5) / leafCount);
+            const theta = Math.PI * (1 + Math.sqrt(5)) * (i + 0.5);
 
-            // Position relative to cluster center
-            leaf.translate(Math.cos(angle) * radius, height, Math.sin(angle) * radius)
+            const r = 0.5 + Math.random() * 0.5
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = Math.abs(r * Math.sin(phi) * Math.sin(theta)); // Upper hemisphere prefer
+            const z = r * Math.cos(phi);
 
-            // Random rotations
-            leaf.rotateY(Math.random() * Math.PI * 2)
-            leaf.rotateX((Math.random() - 0.5) * 1.0)
-            leaf.rotateZ((Math.random() - 0.5) * 1.0)
+            // Rotate to face outwards
+            dummy.position.set(0, 0, 0);
+            dummy.rotation.set(0, 0, 0);
+            dummy.lookAt(x, y, z);
+            dummy.updateMatrix();
+            leaf.applyMatrix4(dummy.matrix);
 
-            // Scale variation
-            const s = 0.5 + Math.random() * 0.8
-            leaf.scale(s, s, s)
+            // Translate
+            leaf.translate(x, y, z);
 
             geometries.push(leaf)
         }
 
-        // Merge geometries manually
+        // Manual merge
         let totalVerts = 0
         geometries.forEach(g => totalVerts += g.attributes.position.count)
 
@@ -119,7 +156,13 @@ const Canopy = () => {
   const { trunks, leaves } = useMemo(() => {
     const trunks = []
     const leaves = []
-    const leafColors = ["#2d4a22", "#3a5f2d", "#4c7a3b", "#1e3618", "#5e8c4b"]
+    const leafColors = [
+        new THREE.Color("#2d4a22"),
+        new THREE.Color("#3a5f2d"),
+        new THREE.Color("#4c7a3b"),
+        new THREE.Color("#1e3618"),
+        new THREE.Color("#5e8c4b")
+    ]
 
     for (let i = 0; i < TreeConfig.count; i++) {
       const x = (Math.random() - 0.5) * TreeConfig.area
@@ -127,32 +170,26 @@ const Canopy = () => {
 
       const terrainH = getTerrainHeight(x, z)
 
-      // Avoid river (if too low)
       if (terrainH < -0.5) continue;
 
       const height = TreeConfig.minHeight + Math.random() * (TreeConfig.maxHeight - TreeConfig.minHeight)
-      const scaleBase = 2.0 + Math.random() * 2.0 // Thicker, ancient trunks
+      const scaleBase = 2.5 + Math.random() * 2.5
       const rotation = Math.random() * Math.PI * 2
 
-      // Trunk
-      // Height is handled by scaling Y
       trunks.push({
         position: [x, terrainH, z],
         scale: [scaleBase, height, scaleBase],
         rotation: [0, rotation, 0]
       })
 
-      // Canopy Clusters
-      const clusterCount = 20 + Math.floor(Math.random() * 15) // Denser canopy
+      const clusterCount = 25 + Math.floor(Math.random() * 20)
 
       for (let c = 0; c < clusterCount; c++) {
-          // Distribution: cone-like at top
-          const hRatio = 0.5 + Math.random() * 0.5 // Top 50%
+          const hRatio = 0.4 + Math.random() * 0.6
           const clusterY = height * hRatio
 
-          // Radius increases as we go down from top
-          const maxR = 6.0 * (1.0 - (hRatio - 0.5)*2.0) + 2.0
-          const r = Math.random() * maxR
+          const maxR = 8.0 * (1.0 - Math.pow(hRatio - 0.4, 2.0));
+          const r = Math.random() * maxR + 1.0
           const theta = Math.random() * Math.PI * 2
 
           const lx = x + Math.cos(theta) * r
@@ -161,7 +198,7 @@ const Canopy = () => {
           leaves.push({
               position: [lx, terrainH + clusterY, lz],
               rotation: [Math.random()*0.5, Math.random()*Math.PI*2, Math.random()*0.5],
-              scale: 1.0 + Math.random() * 0.8,
+              scale: 1.2 + Math.random() * 1.0,
               color: leafColors[Math.floor(Math.random() * leafColors.length)]
           })
       }
@@ -171,7 +208,6 @@ const Canopy = () => {
 
   return (
     <group>
-      {/* Trunks */}
       <Instances range={trunks.length} geometry={trunkGeo} castShadow receiveShadow>
         <BarkMaterial />
         {trunks.map((data, i) => (
@@ -179,9 +215,8 @@ const Canopy = () => {
         ))}
       </Instances>
 
-      {/* Leaves */}
       <Instances range={leaves.length} geometry={leafClusterGeo} castShadow receiveShadow>
-        <LeafMaterial uUseAlphaMask={1.0} uWindStrength={0.5} />
+        <LeafMaterial uUseAlphaMask={1.0} uWindStrength={0.6} />
         {leaves.map((data, i) => (
           <Instance
             key={`leaf-${i}`}
