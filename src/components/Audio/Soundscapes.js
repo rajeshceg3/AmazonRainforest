@@ -117,7 +117,6 @@ class RiverLayer {
     // River is at X=0, Z=0 (approx), Y=-2
     // Calculate distance to river line (X axis mostly)
     // Assuming river flows along Z, so distance is abs(x)
-    // Wait, river visual is usually a strip. Let's assume it runs along Z at X=0.
 
     const dist = Math.abs(pos.x)
     const heightFactor = Math.max(0, 20 - pos.y) / 20 // Fade out as we go up
@@ -339,12 +338,12 @@ class CreatureManager {
     }).connect(this.flybyPanner)
     this.flybySynth.volume.value = -20
 
-    // 2. Insects
+    // 3. Insects
     this.insectFilter = new Tone.Filter(9000, "highpass").connect(this.output)
     this.insectOsc = new Tone.Oscillator(12000, "sawtooth").connect(this.insectFilter).start()
     this.insectLFO = new Tone.LFO(15, -60, -40).connect(this.insectOsc.volume).start() // Buzzing volume
 
-    // 3. Frogs
+    // 4. Frogs
     this.frogPanner = new Tone.Panner(0).connect(this.output)
     this.frogSynth = new Tone.MembraneSynth({
         pitchDecay: 0.1,
@@ -354,13 +353,27 @@ class CreatureManager {
     }).connect(this.frogPanner)
     this.frogSynth.volume.value = -18
 
+    // 5. Primates (Monkeys/Howlers)
+    this.monkeyPanner = new Tone.Panner3D(0, 10, 0).connect(this.output)
+    this.monkeySynth = new Tone.FMSynth({
+        harmonicity: 1.5,
+        modulationIndex: 5,
+        detune: 0,
+        oscillator: { type: "sawtooth" },
+        envelope: { attack: 0.1, decay: 0.3, sustain: 0.2, release: 0.5 },
+        modulation: { type: "sine" },
+        modulationEnvelope: { attack: 0.1, decay: 0.2, sustain: 1, release: 0.5 }
+    }).connect(this.monkeyPanner)
+    this.monkeySynth.volume.value = -15
+
     this.lastBirdTime = 0
     this.lastFrogTime = 0
     this.lastFlybyTime = 0
+    this.lastMonkeyTime = 0
   }
 
   update(pos, time) {
-    // Update listener position for Panner3D (Birds)
+    // Update listener position for Panner3D (Birds/Monkeys)
     Tone.Listener.positionX.value = pos.x
     Tone.Listener.positionY.value = pos.y
     Tone.Listener.positionZ.value = pos.z
@@ -381,7 +394,7 @@ class CreatureManager {
 
         // Pitch variation
         // Base C6 (approx 1046Hz) +/- variation
-        const notes = ["C6", "E6", "G6", "A6", "C7", "D6", "F6"]
+        const notes = ["C6", "E6", "G6", "A6", "C7", "D6", "F6", "E5", "G5"]
         const note = notes[Math.floor(Math.random() * notes.length)]
 
         // Randomize modulation index for timbre variety
@@ -409,17 +422,29 @@ class CreatureManager {
       }
     }
 
+    // Monkeys (Occasional)
+    if (time - this.lastMonkeyTime > 20 + Math.random() * 40) {
+        const angle = Math.random() * Math.PI * 2
+        const dist = 20 + Math.random() * 30
+        const mx = pos.x + Math.cos(angle) * dist
+        const my = 15 + Math.random() * 10
+        const mz = pos.z + Math.sin(angle) * dist
+
+        this.monkeyPanner.positionX.value = mx
+        this.monkeyPanner.positionY.value = my
+        this.monkeyPanner.positionZ.value = mz
+
+        // Howl pattern
+        const note = ["C3", "D3", "E3"][Math.floor(Math.random()*3)]
+        this.monkeySynth.triggerAttackRelease(note, "2n", time)
+        this.monkeySynth.triggerAttackRelease(Tone.Frequency(note).transpose(2), "4n", time + 1.0)
+
+        this.lastMonkeyTime = time
+    }
+
     // Flyby Effect
     if (time - this.lastFlybyTime > 15 + Math.random() * 20) {
         // Simulate a bird or large insect flying past
-        const startX = pos.x - 20
-        const endX = pos.x + 20
-        const y = pos.y + 5
-        const z = pos.z + (Math.random() - 0.5) * 10
-
-        // We can't easily animate Panner3D over time without a loop,
-        // but we can set a quick ramp if we had a dedicated "Flyby" class.
-        // For now, let's just trigger a sound at a random close location.
         this.flybyPanner.positionX.value = pos.x + (Math.random()-0.5)*5
         this.flybyPanner.positionY.value = pos.y + 2
         this.flybyPanner.positionZ.value = pos.z + (Math.random()-0.5)*5
@@ -455,6 +480,8 @@ class CreatureManager {
     this.insectLFO.dispose()
     this.frogSynth.dispose()
     this.frogPanner.dispose()
+    this.monkeySynth.dispose()
+    this.monkeyPanner.dispose()
   }
 }
 
@@ -486,35 +513,65 @@ class AmbienceLayer {
 }
 
 // --- Movement Layer ---
-// Simulates brushing against foliage/footsteps based on speed
+// Simulates footsteps based on speed
 class MovementLayer {
     constructor(outputNode) {
         this.output = outputNode
-        this.filter = new Tone.Filter(800, "lowpass").connect(this.output)
-        this.noise = new Tone.Noise("pink").connect(this.filter)
-        this.noise.volume.value = -100 // Silent initially
-        this.noise.start()
+
+        // Footstep Synth (Burst of noise)
+        this.stepFilter = new Tone.Filter(800, "lowpass").connect(this.output)
+        this.stepSynth = new Tone.NoiseSynth({
+            noise: { type: "pink" },
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0 }
+        }).connect(this.stepFilter)
+        this.stepSynth.volume.value = -15
+
+        this.lastStepTime = 0
     }
 
     update(pos, time, speed) {
-        // Map speed (approx 0 to 20 units/sec) to volume
-        // Threshold: moving slowly doesn't make much noise
-        // Max volume: -15dB
-        if (speed > 0.1) {
-             const targetVol = THREE.MathUtils.mapLinear(Math.min(speed, 10), 0, 10, -50, -15)
-             this.noise.volume.rampTo(targetVol, 0.1)
+        // Only trigger steps if moving fast enough
+        if (speed > 0.5) {
+            // Faster speed = shorter interval
+            // Speed 10 = ~3 steps per second?
+            const interval = Math.max(0.25, 0.6 - (speed / 15) * 0.4)
 
-             // Modulate filter frequency with speed for "crunch"
-             const targetFreq = 400 + speed * 100
-             this.filter.frequency.rampTo(targetFreq, 0.1)
-        } else {
-             this.noise.volume.rampTo(-100, 0.2)
+            if (time - this.lastStepTime > interval) {
+                // Determine texture based on position
+                // y < 0: Water/Mud (Low freq)
+                // y > 0: Leaves/Dirt (High freq crunch)
+
+                let filterFreq = 1000
+                let vol = -15
+
+                if (pos.y < -0.2) {
+                    // Water splash
+                    filterFreq = 400
+                    this.stepSynth.noise.type = "brown"
+                    this.stepSynth.envelope.decay = 0.4 // Longer splash
+                    vol = -10
+                } else {
+                    // Leaves/Forest floor
+                    filterFreq = 1200 + Math.random() * 400
+                    this.stepSynth.noise.type = "pink"
+                    this.stepSynth.envelope.decay = 0.15 // Crisp crunch
+                    vol = -15
+                }
+
+                this.stepFilter.frequency.value = filterFreq
+                this.stepSynth.volume.value = vol
+
+                // Randomize velocity slightly
+                this.stepSynth.triggerAttackRelease("16n", time, 0.8 + Math.random() * 0.4)
+
+                this.lastStepTime = time
+            }
         }
     }
 
     dispose() {
-        this.noise.dispose()
-        this.filter.dispose()
+        this.stepSynth.dispose()
+        this.stepFilter.dispose()
     }
 }
 

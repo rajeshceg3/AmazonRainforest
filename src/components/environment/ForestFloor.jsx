@@ -191,16 +191,80 @@ const useBroadleafGeometry = () => {
     }, [])
 }
 
+const useMushroomGeometry = () => {
+    return useMemo(() => {
+        // Stem
+        const stem = new THREE.CylinderGeometry(0.03, 0.04, 0.2, 5)
+        stem.translate(0, 0.1, 0)
+
+        // Cap
+        const cap = new THREE.SphereGeometry(0.12, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2)
+        cap.scale(1, 0.6, 1)
+        cap.translate(0, 0.2, 0)
+
+        // Manual Merge
+        const geometries = [stem, cap]
+        let totalVerts = 0
+        geometries.forEach(g => totalVerts += g.attributes.position.count)
+
+        const mergedPos = new Float32Array(totalVerts * 3)
+        const mergedNorm = new Float32Array(totalVerts * 3)
+        const mergedUV = new Float32Array(totalVerts * 2)
+        const indices = []
+
+        let offset = 0
+        geometries.forEach(g => {
+            const p = g.attributes.position.array
+            const n = g.attributes.normal.array
+            const uv = g.attributes.uv.array
+            const idx = g.index ? g.index.array : null
+
+            mergedPos.set(p, offset * 3)
+            mergedNorm.set(n, offset * 3)
+            mergedUV.set(uv, offset * 2)
+
+            if (idx) {
+                for(let j=0; j<idx.length; j++) {
+                    indices.push(idx[j] + offset)
+                }
+            } else {
+                 for(let j=0; j<g.attributes.position.count; j++) {
+                    indices.push(j + offset)
+                }
+            }
+            offset += g.attributes.position.count
+        })
+
+        const mushroom = new THREE.BufferGeometry()
+        mushroom.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3))
+        mushroom.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3))
+        mushroom.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2))
+        if(indices.length > 0) mushroom.setIndex(indices)
+
+        return mushroom
+    }, [])
+}
+
+const usePebbleGeometry = () => {
+    return useMemo(() => {
+        return new THREE.DodecahedronGeometry(0.1, 0)
+    }, [])
+}
+
 const ForestFloor = () => {
-  const fernCount = 1500
-  const grassCount = 15000
+  const fernCount = 4000 // Increased from 1500
+  const grassCount = 40000 // Increased from 15000
   const fallenLeafCount = 2000
   const broadleafCount = 500
+  const mushroomCount = 800
+  const pebbleCount = 2000
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
   const fallenGeo = useFallenLeafGeometry()
   const broadleafGeo = useBroadleafGeometry()
+  const mushroomGeo = useMushroomGeometry()
+  const pebbleGeo = usePebbleGeometry()
 
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
@@ -331,6 +395,69 @@ const ForestFloor = () => {
       return data
   }, [fallenLeafCount])
 
+  const mushroomData = useMemo(() => {
+    const data = []
+    const baseColor = new THREE.Color("#d2b48c") // Tan
+
+    for(let i=0; i<mushroomCount; i++) {
+        const x = (Math.random() - 0.5) * 380
+        const z = (Math.random() - 0.5) * 380
+        const h = getTerrainHeight(x, z)
+
+        // Don't spawn underwater
+        if (h < -0.2) continue;
+
+        // Mushrooms like moisture but not river bed?
+        // Clumping
+        const density = Math.sin(x * 0.2 + 20) * Math.cos(z * 0.2 + 20)
+        if (density < 0.2) continue; // Very sparse clumps
+
+        const color = baseColor.clone()
+        // Randomize color slightly (some reddish, some brownish)
+        if (Math.random() > 0.8) {
+            color.set("#d65d5d") // Red cap
+        } else {
+            color.offsetHSL(0, 0, (Math.random() - 0.5) * 0.2)
+        }
+
+        data.push({
+            position: [x, h, z],
+            rotation: [0, Math.random() * Math.PI * 2, 0],
+            scale: [0.8 + Math.random() * 0.5, 0.8 + Math.random() * 0.5, 0.8 + Math.random() * 0.5],
+            color: color
+        })
+    }
+    return data
+  }, [mushroomCount])
+
+  const pebbleData = useMemo(() => {
+    const data = []
+    const baseColor = new THREE.Color("#666666")
+
+    for(let i=0; i<pebbleCount; i++) {
+        // Concentrate near river (X=0)
+        // Gaussian distribution on X?
+        // Or just uniform within range
+        const x = (Math.random() - 0.5) * 100 // Near river
+        const z = (Math.random() - 0.5) * 380
+        const h = getTerrainHeight(x, z)
+
+        // Only near water level (approx -2 to 1)
+        if (h > 1 || h < -5) continue;
+
+        const color = baseColor.clone()
+        color.offsetHSL(0, 0, (Math.random() - 0.5) * 0.4) // Grey variations
+
+        data.push({
+            position: [x, h + 0.05, z],
+            rotation: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
+            scale: [0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5, 0.5 + Math.random() * 0.5],
+            color: color
+        })
+    }
+    return data
+  }, [pebbleCount])
+
   return (
     <group>
         {/* Ground Mesh */}
@@ -386,6 +513,34 @@ const ForestFloor = () => {
              {broadleafData.map((data, i) => (
                  <Instance
                     key={`broadleaf-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                 />
+             ))}
+        </Instances>
+
+        {/* Mushroom Instances */}
+        <Instances range={mushroomData.length} geometry={mushroomGeo} castShadow receiveShadow>
+             <meshStandardMaterial roughness={0.8} />
+             {mushroomData.map((data, i) => (
+                 <Instance
+                    key={`mushroom-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                 />
+             ))}
+        </Instances>
+
+        {/* Pebble Instances */}
+        <Instances range={pebbleData.length} geometry={pebbleGeo} castShadow receiveShadow>
+             <meshStandardMaterial roughness={0.6} />
+             {pebbleData.map((data, i) => (
+                 <Instance
+                    key={`pebble-${i}`}
                     position={data.position}
                     rotation={data.rotation}
                     scale={data.scale}

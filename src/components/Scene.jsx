@@ -9,7 +9,7 @@ import River from './environment/River'
 import Understory from './environment/Understory'
 import Rocks from './environment/Rocks'
 import WaterLilies from './environment/WaterLilies'
-import Butterfly from './entities/Butterfly'
+import Butterflies from './entities/Butterflies'
 import Jaguar from './entities/Jaguar'
 import PinkDolphin from './entities/PinkDolphin'
 import Sloth from './entities/Sloth'
@@ -39,7 +39,7 @@ const Scene = ({ audioStarted }) => {
         intensity={2.5}
         color="#fff5e6" // Warm sunlight
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0005}
       >
         <orthographicCamera attach="shadow-camera" args={[-200, 200, 200, -200, 0.1, 500]} />
@@ -77,9 +77,7 @@ const Scene = ({ audioStarted }) => {
       <Sloth position={[5, 12, 5]} />
       <Macaw position={[-5, 20, -5]} />
 
-      <Butterfly position={[-1.5, 2, -4]} />
-      <Butterfly position={[2, 3, -6]} />
-      <Butterfly position={[0, 3.5, -9]} />
+      <Butterflies />
 
       {/* Soft contact shadows for grounding objects */}
       <ContactShadows
