@@ -5,13 +5,17 @@ def run():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
+        page.on("console", lambda msg: print(f"PAGE LOG: {msg.text}"))
         try:
             page.goto("http://localhost:5173", timeout=60000)
 
             # Click Enter Experience
-            page.get_by_text("ENTER EXPERIENCE").click()
+            print("Looking for Enter Experience button...")
+            page.get_by_role("button", name="Enter Experience").click()
+            print("Clicked button.")
 
             # Wait for canvas
+            print("Waiting for canvas...")
             page.wait_for_selector("canvas", timeout=60000)
 
             # Wait for shaders
