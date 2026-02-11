@@ -3,10 +3,11 @@ import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 import { BarkMaterial } from '../shaders/BarkMaterial.jsx'
 import { LeafMaterial } from '../shaders/LeafMaterial'
+import { VineMaterial } from '../shaders/VineMaterial.jsx'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 const TreeConfig = {
-  count: 80,
+  count: 250,
   area: 400,
   minHeight: 15,
   maxHeight: 35,
@@ -16,7 +17,7 @@ const TreeConfig = {
 const TrunkGeometry = () => {
     return useMemo(() => {
         // High poly cylinder for vertex displacement
-        const geo = new THREE.CylinderGeometry(0.3, 0.7, 1, 32, 64)
+        const geo = new THREE.CylinderGeometry(0.3, 0.7, 1, 24, 48) // Reduced slightly for performance
         geo.translate(0, 0.5, 0) // Pivot at bottom
 
         const pos = geo.attributes.position
@@ -149,13 +150,98 @@ const LeafClusterGeometry = () => {
     }, [])
 }
 
+const useVineGeometry = () => {
+  return useMemo(() => {
+    // Stem
+    const height = 18.0;
+    const stemGeo = new THREE.CylinderGeometry(0.08, 0.03, height, 5, 12, true);
+    stemGeo.translate(0, -height / 2, 0); // Pivot Top
+
+    // Leaf
+    const leafGeo = new THREE.PlaneGeometry(0.5, 0.8, 2, 3);
+    leafGeo.translate(0, 0.4, 0); // Pivot Bottom
+    // Shift slightly off center
+    leafGeo.translate(0.1, 0, 0);
+
+    const geometries = [stemGeo];
+    const leafCount = 25;
+
+    for (let i = 0; i < leafCount; i++) {
+        const l = leafGeo.clone();
+        const y = - (i / leafCount) * height * 0.95 - 0.5;
+        const angle = i * 2.0 + Math.random();
+        l.rotateY(angle);
+        l.rotateX(Math.random() * 0.5); // Droop
+        l.rotateZ(Math.random() * 0.5); // Tilt
+        l.translate(0, y, 0);
+
+        const s = 0.6 + Math.random() * 0.6;
+        l.scale(s, s, s);
+
+        geometries.push(l);
+    }
+
+    // Merge
+    let totalVerts = 0;
+    geometries.forEach(g => totalVerts += g.attributes.position.count);
+
+    const mergedPos = new Float32Array(totalVerts * 3);
+    const mergedNorm = new Float32Array(totalVerts * 3);
+    const mergedUV = new Float32Array(totalVerts * 2);
+    const mergedColor = new Float32Array(totalVerts * 3);
+
+    // Colors
+    const stemColor = new THREE.Color("#4a3b2a");
+    const leafColorBase = new THREE.Color("#4a6f1b");
+
+    let offset = 0;
+    geometries.forEach((g, index) => {
+        const p = g.attributes.position.array;
+        const n = g.attributes.normal.array;
+        const uv = g.attributes.uv.array;
+
+        mergedPos.set(p, offset * 3);
+        mergedNorm.set(n, offset * 3);
+        mergedUV.set(uv, offset * 2);
+
+        // Color
+        const isStem = index === 0;
+        // Clone color to avoid mutating base
+        const c = isStem ? stemColor.clone() : leafColorBase.clone();
+
+        // Variation for leaves
+        if (!isStem) {
+             c.offsetHSL(Math.random()*0.05, 0, (Math.random()-0.5)*0.1);
+        }
+
+        for(let j=0; j<g.attributes.position.count; j++) {
+            mergedColor[offset*3 + j*3 + 0] = c.r;
+            mergedColor[offset*3 + j*3 + 1] = c.g;
+            mergedColor[offset*3 + j*3 + 2] = c.b;
+        }
+
+        offset += g.attributes.position.count;
+    });
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3));
+    geometry.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2));
+    geometry.setAttribute('color', new THREE.BufferAttribute(mergedColor, 3));
+
+    return geometry;
+  }, [])
+}
+
 const Canopy = () => {
   const trunkGeo = TrunkGeometry()
   const leafClusterGeo = LeafClusterGeometry()
+  const vineGeo = useVineGeometry()
 
-  const { trunks, leaves } = useMemo(() => {
+  const { trunks, leaves, vines } = useMemo(() => {
     const trunks = []
     const leaves = []
+    const vines = []
     const leafColors = [
         new THREE.Color("#2d4a22"),
         new THREE.Color("#3a5f2d"),
@@ -164,13 +250,28 @@ const Canopy = () => {
         new THREE.Color("#5e8c4b")
     ]
 
-    for (let i = 0; i < TreeConfig.count; i++) {
+    let treesPlaced = 0;
+    let attempts = 0;
+    const maxAttempts = TreeConfig.count * 10;
+
+    while (treesPlaced < TreeConfig.count && attempts < maxAttempts) {
+      attempts++;
       const x = (Math.random() - 0.5) * TreeConfig.area
       const z = (Math.random() - 0.5) * TreeConfig.area
 
       const terrainH = getTerrainHeight(x, z)
 
-      if (terrainH < -0.5) continue;
+      // Water check
+      if (terrainH < -0.4) continue;
+
+      // Clumping Logic
+      // Noise value -1 to 1.
+      const noise = Math.sin(x * 0.05) * Math.cos(z * 0.05) + Math.sin(x * 0.1 + z * 0.1) * 0.5;
+      // Threshold: if noise < -0.3, skip (clearing)
+      // Allow 15% randomness to break perfect clumps
+      if (noise < -0.3 && Math.random() > 0.15) continue;
+
+      treesPlaced++;
 
       const height = TreeConfig.minHeight + Math.random() * (TreeConfig.maxHeight - TreeConfig.minHeight)
       const scaleBase = 2.5 + Math.random() * 2.5
@@ -181,6 +282,20 @@ const Canopy = () => {
         scale: [scaleBase, height, scaleBase],
         rotation: [0, rotation, 0]
       })
+
+      // Add Vine (40% chance)
+      if (Math.random() < 0.4) {
+          const vy = terrainH + height * 0.85; // Hang from near top
+          // Offset slightly from trunk center
+          const vx = x + (Math.random()-0.5) * 1.5;
+          const vz = z + (Math.random()-0.5) * 1.5;
+
+          vines.push({
+              position: [vx, vy, vz],
+              rotation: [0, Math.random()*Math.PI*2, 0],
+              scale: [1, 0.6 + Math.random()*0.6, 1] // Scale Y varies length
+          })
+      }
 
       const clusterCount = 25 + Math.floor(Math.random() * 20)
 
@@ -203,7 +318,7 @@ const Canopy = () => {
           })
       }
     }
-    return { trunks, leaves }
+    return { trunks, leaves, vines }
   }, [])
 
   return (
@@ -225,6 +340,19 @@ const Canopy = () => {
             scale={data.scale}
             color={data.color}
           />
+        ))}
+      </Instances>
+
+      <Instances range={vines.length} geometry={vineGeo} castShadow receiveShadow>
+        {/* Use white color to allow vertex colors to show through unmodified */}
+        <VineMaterial vertexColors color="#ffffff" uWindStrength={0.8} />
+        {vines.map((data, i) => (
+            <Instance
+                key={`vine-${i}`}
+                position={data.position}
+                rotation={data.rotation}
+                scale={data.scale}
+            />
         ))}
       </Instances>
     </group>
