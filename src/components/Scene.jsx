@@ -6,7 +6,6 @@ import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
 import River from './environment/River'
-import Understory from './environment/Understory'
 import Rocks from './environment/Rocks'
 import WaterLilies from './environment/WaterLilies'
 import Butterfly from './entities/Butterfly'
@@ -64,7 +63,6 @@ const Scene = ({ audioStarted }) => {
       <River />
       <Rocks />
       <WaterLilies />
-      <Understory />
       <Canopy />
 
       <Rain count={4000} />
