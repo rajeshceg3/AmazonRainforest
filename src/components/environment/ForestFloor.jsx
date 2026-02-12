@@ -191,16 +191,48 @@ const useBroadleafGeometry = () => {
     }, [])
 }
 
+const useBushGeometry = () => {
+    return useMemo(() => {
+        const geometry = new THREE.SphereGeometry(0.8, 16, 16)
+        const pos = geometry.attributes.position
+        const v = new THREE.Vector3()
+
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i)
+            // Distort to look like a bush clump
+            const noise = Math.sin(v.x * 5) * Math.sin(v.y * 5) * Math.sin(v.z * 5)
+            const scale = 1.0 + noise * 0.3 + (Math.random() - 0.5) * 0.2
+            v.multiplyScalar(scale)
+            pos.setXYZ(i, v.x, v.y, v.z)
+        }
+        geometry.computeVertexNormals()
+        return geometry
+    }, [])
+}
+
+const useFlowerGeometry = () => {
+    return useMemo(() => {
+        // Small 5-petal shape or just a quad
+        const geometry = new THREE.PlaneGeometry(0.15, 0.15)
+        geometry.rotateX(-Math.PI / 2) // Face up
+        return geometry
+    }, [])
+}
+
 const ForestFloor = () => {
-  const fernCount = 1500
-  const grassCount = 15000
-  const fallenLeafCount = 2000
-  const broadleafCount = 500
+  const fernCount = 5000
+  const grassCount = 60000
+  const fallenLeafCount = 5000
+  const broadleafCount = 1500
+  const bushCount = 300
+  const flowerCount = 2000
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
   const fallenGeo = useFallenLeafGeometry()
   const broadleafGeo = useBroadleafGeometry()
+  const bushGeo = useBushGeometry()
+  const flowerGeo = useFlowerGeometry()
 
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
@@ -307,6 +339,62 @@ const ForestFloor = () => {
       return data
   }, [broadleafCount])
 
+  const bushData = useMemo(() => {
+      const data = []
+      const baseColor = new THREE.Color("#224422") // Darker bush green
+
+      for(let i=0; i<bushCount; i++) {
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          if (h < -0.3) continue;
+
+          // Clumping
+          const density = Math.sin(x * 0.03) * Math.cos(z * 0.03)
+          if (density < -0.5) continue;
+
+          const color = baseColor.clone()
+          color.offsetHSL((Math.random() - 0.5) * 0.1, 0, (Math.random() - 0.5) * 0.2)
+
+          data.push({
+              position: [x, h + 0.4, z], // Slightly buried
+              rotation: [Math.random()*0.2, Math.random() * Math.PI * 2, Math.random()*0.2],
+              scale: [1 + Math.random(), 0.8 + Math.random()*0.5, 1 + Math.random()],
+              color: color
+          })
+      }
+      return data
+  }, [bushCount])
+
+  const flowerData = useMemo(() => {
+      const data = []
+      // Emissive colors: Pink, Orange, White, Yellow
+      const colors = ["#ff007f", "#ffaa00", "#ffffff", "#ffff00", "#ff5500"]
+
+      for(let i=0; i<flowerCount; i++) {
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          if (h < -0.2) continue;
+
+          // Clumping (different pattern)
+          const density = Math.cos(x * 0.07) * Math.sin(z * 0.07 + 2)
+          if (density < 0.2) continue;
+
+          const color = new THREE.Color(colors[Math.floor(Math.random() * colors.length)])
+
+          data.push({
+              position: [x, h + 0.05, z],
+              rotation: [0, Math.random() * Math.PI * 2, 0],
+              scale: 0.8 + Math.random() * 0.4,
+              color: color
+          })
+      }
+      return data
+  }, [flowerCount])
+
   const fallenData = useMemo(() => {
       const data = []
       const baseColor = new THREE.Color("#8b5a2b")
@@ -390,6 +478,39 @@ const ForestFloor = () => {
                     rotation={data.rotation}
                     scale={data.scale}
                     color={data.color}
+                 />
+             ))}
+        </Instances>
+
+        {/* Bush Instances */}
+        <Instances range={bushData.length} geometry={bushGeo} castShadow receiveShadow>
+             <LeafMaterial color="#224422" uWindStrength={0.15} uWindSpeed={0.5} uUseAlphaMask={0.0} />
+             {bushData.map((data, i) => (
+                 <Instance
+                    key={`bush-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color}
+                 />
+             ))}
+        </Instances>
+
+        {/* Flower Instances */}
+        <Instances range={flowerData.length} geometry={flowerGeo}>
+             <LeafMaterial
+                uWindStrength={0.1}
+                uUseAlphaMask={0.0}
+                toneMapped={false} // Make them pop
+                emissiveIntensity={2.0} // Bright
+             />
+             {flowerData.map((data, i) => (
+                 <Instance
+                    key={`flower-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                    color={data.color} // This sets instanceColor
                  />
              ))}
         </Instances>

@@ -61,30 +61,37 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
         }
       ` + shader.fragmentShader
 
+      // Use REPLACE for normal_fragment_begin to properly access computed normals
+      // But we want to modify 'normal' after it's computed?
+      // normal_fragment_begin computes 'normal' from geometry or normal map.
+      // We append our bump mapping.
+
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <normal_fragment_begin>',
         `
         #include <normal_fragment_begin>
 
-        // Generate height for bump mapping
-        float h_n = snoise(vUv * 20.0);
-        float h_n2 = snoise(vUv * 100.0);
-        float h = h_n * 0.5 + h_n2 * 0.2;
+        #ifdef USE_UV
+            // Generate height for bump mapping
+            float h_n = snoise(vUv * 20.0);
+            float h_n2 = snoise(vUv * 100.0);
+            float h = h_n * 0.5 + h_n2 * 0.2;
 
-        // Calculate derivatives for normal perturbation
-        float dHx = dFdx(h);
-        float dHy = dFdy(h);
+            // Calculate derivatives for normal perturbation
+            // We use dFdx/dFdy on the height field
+            float dHx = dFdx(h);
+            float dHy = dFdy(h);
 
-        // Perturb normal (view space)
-        vec3 surfGrad = vec3(dHx, dHy, 0.0);
+            // Strength of bump (Reduced to 2.0)
+            float bumpScale = 2.0;
 
-        // Strength of bump
-        float bumpScale = 5.0;
-
-        // Apply to normal (approximate view space perturbation)
-        normal.x -= dHx * bumpScale;
-        normal.y -= dHy * bumpScale;
-        normal = normalize(normal);
+            // Apply to normal (approximate view space perturbation)
+            // Note: 'normal' here is View Space normal.
+            // Perturbing X/Y works for small bumps on surfaces facing camera.
+            normal.x -= dHx * bumpScale;
+            normal.y -= dHy * bumpScale;
+            normal = normalize(normal);
+        #endif
         `
       )
 
@@ -93,22 +100,25 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
         `
         #include <map_fragment>
 
-        // Re-calculate noise for color (compiler will optimize if identical)
-        float n = snoise(vUv * 20.0);
-        float n2 = snoise(vUv * 100.0);
+        #ifdef USE_UV
+            // Re-calculate noise for color
+            float n_c = snoise(vUv * 20.0);
+            float n2_c = snoise(vUv * 100.0);
 
-        // Mix factor for soil/moss
-        float mixFactor = smoothstep(-0.2, 0.3, n + n2 * 0.2);
+            // Mix factor for soil/moss
+            float mixFactor = smoothstep(-0.2, 0.3, n_c + n2_c * 0.2);
 
-        vec3 soil = uColorSoil;
-        vec3 moss = uColorMoss;
+            // Brightened colors
+            vec3 soil = uColorSoil * 2.5;
+            vec3 moss = uColorMoss * 2.0;
 
-        // Texture variation
-        soil *= (0.8 + 0.4 * n2); // Gritty soil
-        moss *= (0.9 + 0.2 * snoise(vUv * 50.0 + 5.0)); // Moss variation
+            // Texture variation
+            soil *= (0.8 + 0.4 * n2_c); // Gritty soil
+            moss *= (0.9 + 0.2 * snoise(vUv * 50.0 + 5.0)); // Moss variation
 
-        // Apply mix
-        diffuseColor.rgb = mix(soil, moss, mixFactor);
+            // Apply mix
+            diffuseColor.rgb = mix(soil, moss, mixFactor);
+        #endif
         `
       )
     }

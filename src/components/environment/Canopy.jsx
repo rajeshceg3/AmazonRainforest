@@ -6,10 +6,10 @@ import { LeafMaterial } from '../shaders/LeafMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 const TreeConfig = {
-  count: 80,
+  count: 400,
   area: 400,
-  minHeight: 15,
-  maxHeight: 35,
+  minHeight: 18,
+  maxHeight: 45,
 }
 
 // Improved Trunk Geometry: High resolution with root flare and organic shaping
