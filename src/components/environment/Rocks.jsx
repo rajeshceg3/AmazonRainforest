@@ -1,6 +1,7 @@
 import { Instance, Instances } from '@react-three/drei'
 import { useMemo } from 'react'
 import * as THREE from 'three'
+import { RockMaterial } from '../shaders/RockMaterial'
 
 const Rocks = ({ count = 60 }) => {
   const rockData = useMemo(() => {
@@ -21,8 +22,8 @@ const Rocks = ({ count = 60 }) => {
 
   return (
     <Instances range={count}>
-      <dodecahedronGeometry args={[1, 0]} />
-      <meshStandardMaterial color="#4a4036" roughness={0.9} />
+      <sphereGeometry args={[1, 64, 64]} />
+      <RockMaterial uScale={1.5} uColor={new THREE.Color("#4a4036")} uMossColor={new THREE.Color("#2d5a27")} />
       {rockData.map((data, i) => (
         <Instance
           key={i}
