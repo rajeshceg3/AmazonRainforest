@@ -1,5 +1,5 @@
 import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment, Sparkles, Cloud } from '@react-three/drei'
+import { ContactShadows, Environment, Sparkles, Cloud, SpotLight } from '@react-three/drei'
 import { EffectComposer, Bloom, DepthOfField, Vignette, Noise } from '@react-three/postprocessing'
 import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
@@ -31,7 +31,7 @@ const Scene = ({ audioStarted }) => {
       <AudioController started={audioStarted} />
 
       {/* Environment Lighting replaces generic HemisphereLight for more realism */}
-      <Environment preset="forest" background={false} environmentIntensity={0.9} />
+      <Environment preset="forest" background={false} environmentIntensity={1.0} />
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
@@ -45,12 +45,24 @@ const Scene = ({ audioStarted }) => {
         <orthographicCamera attach="shadow-camera" args={[-200, 200, 200, -200, 0.1, 500]} />
       </directionalLight>
 
+      {/* Volumetric God Rays - Simulating sun shafts through canopy */}
+      <SpotLight
+        position={[50, 80, 50]}
+        distance={300}
+        angle={0.6}
+        attenuation={20}
+        anglePower={5}
+        intensity={1.0}
+        color="#fff5e6"
+        opacity={0.2}
+      />
+
       {/* Blue Fill Light for Contrast/Skylight */}
       <pointLight position={[-50, 20, -50]} intensity={1.0} color="#6a7a8a" distance={300} decay={2} />
 
-      {/* Atmospheric Clouds */}
-      <Cloud opacity={0.4} speed={0.1} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
-      <Cloud opacity={0.3} speed={0.05} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
+      {/* Atmospheric Clouds - Denser for humid feel */}
+      <Cloud opacity={0.5} speed={0.1} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
+      <Cloud opacity={0.4} speed={0.05} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
 
       {/* Floating Particles (Pollen/Spores) - Reduced visual noise */}
       <Sparkles count={3000} scale={[400, 50, 400]} size={2} speed={0.4} opacity={0.3} color="#ccffcc" />

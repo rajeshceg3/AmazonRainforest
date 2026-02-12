@@ -49,17 +49,20 @@ class WindLayer {
     const pan = THREE.MathUtils.clamp(pos.x / 100, -0.5, 0.5)
     this.panner.pan.rampTo(pan, 0.1)
 
-    // Gusts
-    if (time - this.lastGustTime > 5 + Math.random() * 8) {
-        if (Math.random() > 0.4) {
+    // Gusts - More frequent and dynamic
+    if (time - this.lastGustTime > 3 + Math.random() * 6) {
+        if (Math.random() > 0.3) {
             // Gust duration
-            const dur = 3 + Math.random() * 5
+            const dur = 2 + Math.random() * 4
             // Gust volume
-            const gustVol = baseVol + (Math.random() * 5) // Can be louder than base
+            const gustVol = baseVol + (Math.random() * 8) // Louder gusts
             this.gustNoise.volume.rampTo(gustVol, dur/2)
 
-            // Pan gusts
-            this.panner.pan.rampTo((Math.random() - 0.5) * 0.8, dur)
+            // Pan gusts more widely
+            this.panner.pan.rampTo((Math.random() - 0.5) * 1.5, dur)
+
+            // Modulate filter for "swish" sound
+            this.gustFilter.frequency.rampTo(600 + Math.random() * 600, dur/2)
 
             setTimeout(() => {
                 this.gustNoise.volume.rampTo(-60, dur/2)
@@ -518,6 +521,68 @@ class MovementLayer {
     }
 }
 
+// --- Footsteps Layer ---
+class FootstepsLayer {
+    constructor(outputNode) {
+        this.output = outputNode
+        this.panner = new Tone.Panner(0).connect(this.output)
+
+        // Filtered Noise for "Crunch"
+        this.filter = new Tone.Filter(1000, "lowpass").connect(this.panner)
+
+        this.gain = new Tone.Gain(0).connect(this.filter)
+
+        this.noise = new Tone.Noise("brown").connect(this.gain)
+        this.noise.start()
+
+        // Envelope controlling gain
+        this.env = new Tone.Envelope({
+            attack: 0.01,
+            decay: 0.1,
+            sustain: 0,
+            release: 0.1
+        }).connect(this.gain.gain)
+
+        this.lastPos = null
+        this.distAcc = 0
+        this.stepInterval = 4.0 // Step every 4 units
+    }
+
+    update(pos, time) {
+        if (!this.lastPos) {
+            this.lastPos = pos.clone()
+            return
+        }
+
+        const dist = pos.distanceTo(this.lastPos)
+        this.distAcc += dist
+
+        if (this.distAcc > this.stepInterval) {
+            this.triggerStep(time)
+            this.distAcc = 0
+        }
+
+        this.lastPos.copy(pos)
+    }
+
+    triggerStep(time) {
+        // Randomize
+        this.filter.frequency.value = 800 + Math.random() * 400
+        this.panner.pan.value = (Math.random() - 0.5) * 0.3
+
+        // Trigger envelope
+        this.env.triggerAttackRelease(0.1, time)
+    }
+
+    dispose() {
+        this.noise.dispose()
+        this.filter.dispose()
+        this.gain.dispose()
+        this.env.dispose()
+        this.panner.dispose()
+    }
+}
+
 // --- Main Manager ---
 export class SoundscapeManager {
   constructor() {
@@ -534,6 +599,7 @@ export class SoundscapeManager {
     this.ambience = new AmbienceLayer(this.reverb)
     this.wind = new WindLayer(this.reverb)
     this.movement = new MovementLayer(this.reverb)
+    this.footsteps = new FootstepsLayer(this.reverb)
 
     // Thunder Synth
     this.thunderSynth = new Tone.NoiseSynth({
@@ -567,6 +633,7 @@ export class SoundscapeManager {
     this.ambience.update(p, time)
     this.wind.update(p, time)
     this.movement.update(p, time, speed)
+    this.footsteps.update(p, time)
   }
 
   triggerThunder(distance) {
@@ -599,6 +666,7 @@ export class SoundscapeManager {
     this.ambience.dispose()
     this.wind.dispose()
     this.movement.dispose()
+    this.footsteps.dispose()
     this.thunderSynth.dispose()
     this.thunderRumble.dispose()
     this.reverb.dispose()
