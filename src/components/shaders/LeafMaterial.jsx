@@ -78,8 +78,14 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
         `
         #include <begin_vertex>
 
-        vec4 worldPos = instanceMatrix * vec4(transformed, 1.0);
-        worldPos = modelMatrix * worldPos;
+        // Calculate world position manually including instance matrix
+        #ifdef USE_INSTANCING
+          vec4 worldPos = instanceMatrix * vec4(transformed, 1.0);
+          worldPos = modelMatrix * worldPos;
+        #else
+          vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
+        #endif
+
         vInstanceWorldPos = worldPos.xyz;
 
         float windNoise = leaf_snoise(worldPos.xz * 0.1 + uTime * uWindSpeed * 0.5);
@@ -116,6 +122,24 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
             float cloudNoise = leaf_snoise(vInstanceWorldPos.xz * 0.01 + vec2(uTime * 0.05, 0.0));
             float cloudShadow = smoothstep(0.0, 0.6, cloudNoise);
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.4, cloudShadow * 0.7);
+
+            // --- Fake Subsurface Scattering (SSS) ---
+            // Sun Direction (hardcoded to match Scene.jsx light)
+            vec3 sunDir = normalize(vec3(50.0, 100.0, 50.0));
+
+            // View Direction (Camera to Fragment)
+            vec3 worldViewDir = normalize(cameraPosition - vInstanceWorldPos);
+
+            // Backlighting effect: Light is behind the leaf relative to camera
+            // dot(view, sun) approaches 1.0 when looking into the sun
+            float backLight = max(0.0, dot(worldViewDir, sunDir));
+
+            // Power curve to focus the effect (halo)
+            float sss = pow(backLight, 6.0);
+
+            // Add SSS glow (Yellowish-Green)
+            // Only apply if looking against the light
+            diffuseColor.rgb += vec3(0.5, 0.7, 0.2) * sss * 0.8;
 
             // Soft Edge Alpha (Disabled if uUseAlphaMask <= 0.5)
             if (uUseAlphaMask > 0.5) {

@@ -58,21 +58,21 @@ class RiverLayer {
     this.rumble.start()
 
     // 2. Rushing Water (Pink Noise + Filter modulation)
-    this.rushFilter = new Tone.Filter(600, "lowpass").connect(this.panner)
+    this.rushFilter = new Tone.Filter(300, "lowpass").connect(this.panner)
     this.rushNoise = new Tone.Noise("pink").connect(this.rushFilter)
     this.rushNoise.volume.value = -60
     this.rushNoise.start()
 
     // LFO to modulate filter frequency for "movement"
-    this.rushLFO = new Tone.LFO(0.15, 500, 800).connect(this.rushFilter.frequency).start()
+    this.rushLFO = new Tone.LFO(0.15, 200, 500).connect(this.rushFilter.frequency).start()
 
     // 3. Bubbles/Lap (MetalSynth for water texture)
     this.bubbleSynth = new Tone.MetalSynth({
         frequency: 200,
         envelope: { attack: 0.01, decay: 0.1, release: 0.1 },
         harmonicity: 5.1,
-        modulationIndex: 32,
-        resonance: 4000,
+        modulationIndex: 40,
+        resonance: 3000, // Slightly reduced resonance for "wetter" sound
         octaves: 1.5
     }).connect(this.panner)
     this.bubbleSynth.volume.value = -25
@@ -352,12 +352,18 @@ class CreatureManager {
     }).connect(this.compressor)
     this.toucanSynth.volume.value = -12
 
+    // Vibrato for Toucan
+    this.toucanVibrato = new Tone.LFO(6, -10, 10).connect(this.toucanSynth.detune).start()
+
     // 2. Piha Synth (Sine - Whistle)
     this.pihaSynth = new Tone.Synth({
         oscillator: { type: "sine" },
         envelope: { attack: 0.1, decay: 0.1, sustain: 0.8, release: 0.5 }
     }).connect(this.compressor)
     this.pihaSynth.volume.value = -14
+
+    // Vibrato for Piha (Deep warble)
+    this.pihaVibrato = new Tone.LFO(4, -15, 15).connect(this.pihaSynth.detune).start()
 
     // 3. Parrot Synth (Noise/FM hybrid)
     this.parrotSynth = new Tone.NoiseSynth({
@@ -439,7 +445,9 @@ class CreatureManager {
 
   dispose() {
     this.toucanSynth.dispose()
+    this.toucanVibrato.dispose()
     this.pihaSynth.dispose()
+    this.pihaVibrato.dispose()
     this.parrotSynth.dispose()
     this.birdPanner.dispose()
     this.compressor.dispose()

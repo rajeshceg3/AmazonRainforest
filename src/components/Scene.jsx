@@ -25,8 +25,8 @@ const Scene = ({ audioStarted }) => {
       camera={{ position: [0, 2, 10], fov: 45 }}
       style={{ background: '#051605' }} // Deep forest dark green
     >
-      {/* Fog for depth and atmosphere - adjusted for denser, moodier feel */}
-      <fog attach="fog" args={['#051510', 20, 180]} />
+      {/* Fog for depth and atmosphere - adjusted for denser, moodier feel (Teal-ish) */}
+      <fog attach="fog" args={['#0a2a2a', 20, 180]} />
 
       <AudioController started={audioStarted} />
 
@@ -52,9 +52,9 @@ const Scene = ({ audioStarted }) => {
         angle={0.6}
         attenuation={20}
         anglePower={5}
-        intensity={1.0}
+        intensity={1.5}
         color="#fff5e6"
-        opacity={0.2}
+        opacity={0.3}
       />
 
       {/* Blue Fill Light for Contrast/Skylight */}
@@ -107,8 +107,8 @@ const Scene = ({ audioStarted }) => {
         {/* Depth of Field for cinematic look - Focuses around 15-20 units away */}
         <DepthOfField focusDistance={0.015} focalLength={0.02} bokehScale={2} height={480} />
 
-        {/* Bloom for fireflies and sun glints */}
-        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} height={300} intensity={0.5} />
+        {/* Bloom for fireflies and sun glints - Increased for "stunning" glow */}
+        <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} height={300} intensity={0.8} />
 
         {/* Subtle Noise for organic film grain texture */}
         <Noise opacity={0.02} />
