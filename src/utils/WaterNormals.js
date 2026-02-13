@@ -35,6 +35,21 @@ function noise(x, y) {
                    lerp(u, grad(perm[AB], x, y - 1), grad(perm[BB], x - 1, y - 1)));
 }
 
+// Fractal Brownian Motion for richer detail
+function fbm(x, y) {
+    let total = 0;
+    let amplitude = 1.0;
+    let frequency = 1.0;
+    let maxValue = 0;
+    for(let i=0; i<4; i++) {
+        total += noise(x * frequency, y * frequency) * amplitude;
+        maxValue += amplitude;
+        amplitude *= 0.5;
+        frequency *= 2.0;
+    }
+    return total / maxValue;
+}
+
 export function useWaterNormals(size = 512) {
   return useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -44,29 +59,22 @@ export function useWaterNormals(size = 512) {
     const imgData = ctx.createImageData(size, size)
     const data = imgData.data
 
-    // Scale of noise
-    const scale = 8.0
+    // Scale of noise - slightly larger base scale for FBM
+    const scale = 5.0
 
     for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
-            // Generate height from noise
-            // We want normals, so we need derivatives or just map noise to color directly?
-            // Usually normal maps are generated from height maps by taking neighbor differences.
-            // But here we can just map noise to "tilt".
-
-            // Let's generate a height map first implicitly
-            // Normal = normalize(-dh/dx, -dh/dy, 1)
-
             const nx = x / size
             const ny = y / size
 
-            // Sample noise at slightly offset positions to get derivatives
-            const h = noise(nx * scale, ny * scale)
-            const h_right = noise((nx + 1/size) * scale, ny * scale)
-            const h_up = noise(nx * scale, (ny + 1/size) * scale)
+            // Sample FBM noise at slightly offset positions to get derivatives
+            const h = fbm(nx * scale, ny * scale)
+            const h_right = fbm((nx + 1/size) * scale, ny * scale)
+            const h_up = fbm(nx * scale, (ny + 1/size) * scale)
 
-            const dx = (h_right - h) * 15.0 // Strength factor
-            const dy = (h_up - h) * 15.0
+            // Increased strength for more defined ripples
+            const dx = (h_right - h) * 25.0
+            const dy = (h_up - h) * 25.0
 
             const v = new THREE.Vector3(-dx, -dy, 1.0).normalize()
 
