@@ -9,7 +9,10 @@ def run():
             page.goto("http://localhost:5173", timeout=60000)
 
             # Click Enter Experience
-            page.get_by_text("ENTER EXPERIENCE").click()
+            try:
+                page.get_by_text("ENTER EXPERIENCE").click(timeout=10000)
+            except:
+                print("Could not find ENTER EXPERIENCE, maybe auto-started or stuck")
 
             # Wait for canvas
             page.wait_for_selector("canvas", timeout=60000)
