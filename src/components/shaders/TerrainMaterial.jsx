@@ -27,11 +27,7 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
       shader.uniforms.uColorSoil = uniforms.current.uColorSoil
       shader.uniforms.uColorMoss = uniforms.current.uColorMoss
 
-      shader.fragmentShader = `
-        uniform float uScale;
-        uniform vec3 uColorSoil;
-        uniform vec3 uColorMoss;
-
+      const noiseFuncs = `
         // Simplex Noise (2D)
         vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
         float snoise(vec2 v){
@@ -59,12 +55,27 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
           g.yz = a0.yz * x12.xz + h.yz * x12.yw;
           return 130.0 * dot(m, g);
         }
-      ` + shader.fragmentShader
 
-      // Use REPLACE for normal_fragment_begin to properly access computed normals
-      // But we want to modify 'normal' after it's computed?
-      // normal_fragment_begin computes 'normal' from geometry or normal map.
-      // We append our bump mapping.
+        // FBM
+        float fbm(vec2 p) {
+            float total = 0.0;
+            float amplitude = 0.5;
+            float frequency = 1.0;
+            for (int i = 0; i < 5; i++) {
+                total += snoise(p * frequency) * amplitude;
+                amplitude *= 0.5;
+                frequency *= 2.0;
+            }
+            return total;
+        }
+      `
+
+      shader.fragmentShader = `
+        uniform float uScale;
+        uniform vec3 uColorSoil;
+        uniform vec3 uColorMoss;
+        ${noiseFuncs}
+      ` + shader.fragmentShader
 
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <normal_fragment_begin>',
@@ -72,22 +83,17 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
         #include <normal_fragment_begin>
 
         #ifdef USE_UV
-            // Generate height for bump mapping
-            float h_n = snoise(vUv * 20.0);
-            float h_n2 = snoise(vUv * 100.0);
-            float h = h_n * 0.5 + h_n2 * 0.2;
+            // Generate height for bump mapping using FBM
+            float h_n = fbm(vUv * 20.0);
+            float h = h_n * 0.5;
 
             // Calculate derivatives for normal perturbation
-            // We use dFdx/dFdy on the height field
             float dHx = dFdx(h);
             float dHy = dFdy(h);
 
-            // Strength of bump (Reduced to 2.0)
-            float bumpScale = 2.0;
+            // Strength of bump
+            float bumpScale = 3.0;
 
-            // Apply to normal (approximate view space perturbation)
-            // Note: 'normal' here is View Space normal.
-            // Perturbing X/Y works for small bumps on surfaces facing camera.
             normal.x -= dHx * bumpScale;
             normal.y -= dHy * bumpScale;
             normal = normalize(normal);
@@ -101,23 +107,41 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
         #include <map_fragment>
 
         #ifdef USE_UV
+            // Calculate slope
+            // We need View Up vector.
+            vec3 viewUp = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+            float slope = dot(vNormal, viewUp); // 1.0 = flat, 0.0 = vertical
+
             // Re-calculate noise for color
-            float n_c = snoise(vUv * 20.0);
-            float n2_c = snoise(vUv * 100.0);
+            float n_soil = fbm(vUv * 15.0);
+            float n_moss = fbm(vUv * 8.0 + 5.0);
+            float n_rock = fbm(vUv * 30.0 + 10.0);
 
-            // Mix factor for soil/moss
-            float mixFactor = smoothstep(-0.2, 0.3, n_c + n2_c * 0.2);
+            // Colors
+            vec3 soilColor = uColorSoil * (0.8 + 0.4 * n_soil);
+            vec3 mossColor = uColorMoss * (0.9 + 0.3 * n_moss);
+            vec3 rockColor = vec3(0.3, 0.3, 0.35) * (0.5 + 0.5 * n_rock); // Greyish rock
 
-            // Brightened colors
-            vec3 soil = uColorSoil * 2.5;
-            vec3 moss = uColorMoss * 2.0;
+            // Mixing Logic
+            // Base is soil
+            vec3 finalColor = soilColor;
 
-            // Texture variation
-            soil *= (0.8 + 0.4 * n2_c); // Gritty soil
-            moss *= (0.9 + 0.2 * snoise(vUv * 50.0 + 5.0)); // Moss variation
+            // Add moss (patches on flat ground)
+            float mossMix = smoothstep(0.4, 0.6, n_moss);
+            // Moss prefers flat ground
+            mossMix *= smoothstep(0.7, 0.9, slope);
 
-            // Apply mix
-            diffuseColor.rgb = mix(soil, moss, mixFactor);
+            finalColor = mix(finalColor, mossColor, mossMix);
+
+            // Add rock (on steep slopes or random patches)
+            float slopeRock = 1.0 - smoothstep(0.7, 0.9, slope);
+            float patchRock = smoothstep(0.6, 0.8, n_rock);
+
+            float rockMix = max(slopeRock, patchRock * 0.5);
+
+            finalColor = mix(finalColor, rockColor, rockMix);
+
+            diffuseColor.rgb = finalColor;
         #endif
         `
       )

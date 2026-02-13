@@ -41,7 +41,7 @@ function fbm(x, y) {
     let amplitude = 1.0;
     let frequency = 1.0;
     let maxValue = 0;
-    for(let i=0; i<4; i++) {
+    for(let i=0; i<5; i++) { // Increased to 5 octaves
         total += noise(x * frequency, y * frequency) * amplitude;
         maxValue += amplitude;
         amplitude *= 0.5;
@@ -50,8 +50,11 @@ function fbm(x, y) {
     return total / maxValue;
 }
 
-export function useWaterNormals(size = 512) {
+export function useWaterNormals(size = 1024) { // Increased default resolution
   return useMemo(() => {
+    // Use DataTexture instead of Canvas for performance/simplicity in data handling?
+    // But we need to generate normal map logic.
+    // Let's stick to Canvas loop, it's fine for once-off generation.
     const canvas = document.createElement('canvas')
     canvas.width = size
     canvas.height = size
@@ -59,8 +62,8 @@ export function useWaterNormals(size = 512) {
     const imgData = ctx.createImageData(size, size)
     const data = imgData.data
 
-    // Scale of noise - slightly larger base scale for FBM
-    const scale = 5.0
+    // Scale of noise
+    const scale = 8.0
 
     for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
@@ -69,12 +72,12 @@ export function useWaterNormals(size = 512) {
 
             // Sample FBM noise at slightly offset positions to get derivatives
             const h = fbm(nx * scale, ny * scale)
-            const h_right = fbm((nx + 1/size) * scale, ny * scale)
-            const h_up = fbm(nx * scale, (ny + 1/size) * scale)
+            const h_right = fbm((nx + 1.0/size) * scale, ny * scale)
+            const h_up = fbm(nx * scale, (ny + 1.0/size) * scale)
 
             // Increased strength for more defined ripples
-            const dx = (h_right - h) * 25.0
-            const dy = (h_up - h) * 25.0
+            const dx = (h_right - h) * 40.0 // Stronger normals
+            const dy = (h_up - h) * 40.0
 
             const v = new THREE.Vector3(-dx, -dy, 1.0).normalize()
 
