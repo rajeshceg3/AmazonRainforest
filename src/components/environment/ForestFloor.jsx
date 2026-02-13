@@ -212,9 +212,36 @@ const useBushGeometry = () => {
 
 const useFlowerGeometry = () => {
     return useMemo(() => {
-        // Small 5-petal shape or just a quad
-        const geometry = new THREE.PlaneGeometry(0.15, 0.15)
+        // 5-petal star shape (10 segments: 5 outer, 5 inner)
+        const geometry = new THREE.CircleGeometry(0.15, 10)
         geometry.rotateX(-Math.PI / 2) // Face up
+
+        const pos = geometry.attributes.position
+        const v = new THREE.Vector3()
+
+        // Deform circle into star/flower
+        for (let i = 1; i < pos.count; i++) {
+             v.fromBufferAttribute(pos, i)
+
+             // Even indices are "inner" points (between petals), Odd are "outer" (petals)
+             // Note: Index 0 is center. Indices 1..11 are perimeter.
+             // 1 is odd (tip), 2 is even (valley), etc.
+             if (i % 2 === 0) {
+                 v.multiplyScalar(0.4) // Pinch in for valley
+                 v.y += 0.05 // Lift center/valley
+             } else {
+                 // Petal tip
+                 v.y -= 0.02 // Curve down
+             }
+             pos.setXYZ(i, v.x, v.y, v.z)
+        }
+
+        // Center point depression
+        v.fromBufferAttribute(pos, 0)
+        v.y -= 0.05
+        pos.setXYZ(0, v.x, v.y, v.z)
+
+        geometry.computeVertexNormals()
         return geometry
     }, [])
 }

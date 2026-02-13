@@ -25,23 +25,23 @@ const River = () => {
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[400, 400, 64, 64]} />
         <MeshReflectorMaterial
-          envMapIntensity={0.8} // Stronger env reflection for mood
+          envMapIntensity={1.0} // Stronger env reflection for mood
           normalMap={normalMap}
-          normalScale={[0.8, 0.8]} // Rougher surface
-          color="#15100a" // Slightly lighter tannin
-          roughness={0.5} // More organic scattering
-          metalness={0.2}
-          blur={[300, 100]} // Blur ground reflections
-          mixBlur={4.0} // Very soft reflections
-          mixStrength={3.0} // Stronger reflection mix
-          mixContrast={1.2} // Higher contrast
+          normalScale={[1.2, 1.2]} // Very rough surface for turbulence
+          color="#0a1a0a" // Deep dark river water (blackwater)
+          roughness={0.6} // More organic scattering, less plastic
+          metalness={0.1}
+          blur={[400, 100]} // Blur ground reflections heavily
+          mixBlur={5.0} // Very soft reflections
+          mixStrength={2.0} // Subtle reflection mix
+          mixContrast={1.1} // Lower contrast
           resolution={1024}
-          mirror={0.6} // Slightly less mirror-like
+          mirror={0.5} // Less mirror-like
           depthScale={2.0} // More depth perception in reflection
           minDepthThreshold={0.4}
           maxDepthThreshold={1.4}
           depthToBlurRatioBias={0.25}
-          distortion={2.2} // Higher distortion for organic flow
+          distortion={3.0} // High distortion for organic flow
           distortionMap={distortionMap}
           debug={0}
         />
