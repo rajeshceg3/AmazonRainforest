@@ -17,6 +17,7 @@ import Macaw from './entities/Macaw'
 import Rain from './environment/Rain'
 import Fireflies from './environment/Fireflies'
 import Lightning from './environment/Lightning'
+import FallingLeaves from './environment/FallingLeaves'
 
 const Scene = ({ audioStarted }) => {
   return (
@@ -26,12 +27,12 @@ const Scene = ({ audioStarted }) => {
       style={{ background: '#051605' }} // Deep forest dark green
     >
       {/* Fog for depth and atmosphere - adjusted for denser, moodier feel (Organic Green) */}
-      <fog attach="fog" args={['#1a2b1a', 20, 180]} />
+      <fog attach="fog" args={['#052525', 10, 150]} />
 
       <AudioController started={audioStarted} />
 
       {/* Environment Lighting replaces generic HemisphereLight for more realism */}
-      <Environment preset="forest" background={false} environmentIntensity={0.8} />
+      <Environment preset="forest" background={false} environmentIntensity={1.2} />
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
@@ -81,6 +82,7 @@ const Scene = ({ audioStarted }) => {
 
       <Rain count={4000} />
       <Fireflies count={400} />
+      <FallingLeaves count={300} />
 
       {/* Fauna */}
       {/* Moved Jaguar closer and grounded */}

@@ -2,15 +2,15 @@ import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-const Fireflies = ({ count = 200 }) => {
+const Fireflies = ({ count = 400 }) => {
   const points = useRef()
 
   const material = useMemo(() => {
     return new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uColor: { value: new THREE.Color('#ffffe0') }, // Light yellow
-        uSize: { value: 100.0 } // base size
+        uColor: { value: new THREE.Color('#ccffcc') }, // More greenish yellow
+        uSize: { value: 150.0 } // Increased size for better visibility
       },
       vertexShader: `
         uniform float uTime;
@@ -21,11 +21,11 @@ const Fireflies = ({ count = 200 }) => {
         void main() {
           vec3 pos = position;
 
-          // Add subtle floating movement
+          // Add subtle floating movement - Increased Range
           // Use randomness to make each firefly move differently
-          pos.x += sin(uTime * 0.5 + aRandomness.x * 10.0) * 0.5;
-          pos.y += cos(uTime * 0.3 + aRandomness.y * 10.0) * 0.5;
-          pos.z += sin(uTime * 0.4 + aRandomness.z * 10.0) * 0.5;
+          pos.x += sin(uTime * 0.5 + aRandomness.x * 10.0) * 2.0;
+          pos.y += cos(uTime * 0.3 + aRandomness.y * 10.0) * 2.0;
+          pos.z += sin(uTime * 0.4 + aRandomness.z * 10.0) * 2.0;
 
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
           gl_Position = projectionMatrix * mvPosition;

@@ -15,9 +15,11 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
 
   // Update uniforms when props change
   useLayoutEffect(() => {
-    uniforms.current.uWindStrength.value = uWindStrength
-    uniforms.current.uWindSpeed.value = uWindSpeed
-    uniforms.current.uUseAlphaMask.value = uUseAlphaMask
+    if (uniforms.current) {
+        uniforms.current.uWindStrength.value = uWindStrength
+        uniforms.current.uWindSpeed.value = uWindSpeed
+        uniforms.current.uUseAlphaMask.value = uUseAlphaMask
+    }
   }, [uWindStrength, uWindSpeed, uUseAlphaMask])
 
   // Update time every frame
@@ -92,8 +94,11 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
         #include <begin_vertex>
 
         // Calculate world position manually including instance matrix
+        float randomPhase = 0.0;
+
         #ifdef USE_INSTANCING
           vec4 worldPos = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+          randomPhase = sin(instanceMatrix[3][0] * 12.9898 + instanceMatrix[3][2] * 78.233);
         #else
           vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
         #endif
@@ -105,9 +110,9 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
 
         float bend = uv.y * uWindStrength * (0.1 + windGust * 0.2);
 
-        transformed.x += sin(uTime * 2.0 + worldPos.x) * bend;
-        transformed.z += cos(uTime * 1.5 + worldPos.z) * bend;
-        transformed.y += sin(uTime * 3.0 + worldPos.x * 0.5) * bend * 0.5;
+        transformed.x += sin(uTime * 2.0 + worldPos.x + randomPhase * 10.0) * bend;
+        transformed.z += cos(uTime * 1.5 + worldPos.z + randomPhase * 10.0) * bend;
+        transformed.y += sin(uTime * 3.0 + worldPos.x * 0.5 + randomPhase * 5.0) * bend * 0.5;
         `
       )
 
@@ -130,8 +135,6 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
 
             // Veins (darker lines)
             float vein = smoothstep(0.4, 0.55, abs(n - 0.5) * 2.0);
-            // Invert logic: smoothstep returns 0..1.
-            // We want veins to be dark.
 
             // Add subtle noise to diffuse
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.6, vein * 0.3);
@@ -148,18 +151,16 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
             // View Direction (Camera to Fragment)
             vec3 worldViewDir = normalize(cameraPosition - vInstanceWorldPos);
 
-            // Backlighting effect: Light is behind the leaf relative to camera
-            // dot(view, sun) approaches 1.0 when looking into the sun
+            // Backlighting effect
             float backLight = max(0.0, dot(worldViewDir, sunDir));
 
             // Power curve to focus the effect (halo)
             float sss = pow(backLight, 6.0);
 
-            // Mask SSS with veins (thicker parts don't transmit light)
+            // Mask SSS with veins
             sss *= (1.0 - vein * 0.8);
 
             // Add SSS glow (Yellowish-Green)
-            // Only apply if looking against the light
             diffuseColor.rgb += vec3(0.5, 0.7, 0.2) * sss * 0.8;
 
             // Soft Edge Alpha (Disabled if uUseAlphaMask <= 0.5)
