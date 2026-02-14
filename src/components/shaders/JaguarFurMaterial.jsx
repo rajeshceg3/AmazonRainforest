@@ -1,7 +1,7 @@
 import React, { useRef, useLayoutEffect } from 'react'
 import * as THREE from 'three'
 
-export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotColor = new THREE.Color('#2b1d0e'), uScale = 4.0, ...props }) {
+export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotColor = new THREE.Color('#2b1d0e'), uScale = 2.0, ...props }) {
   const materialRef = useRef()
   const uniforms = useRef({
     uColor: { value: uColor },
@@ -76,7 +76,7 @@ export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotCo
         }
       `
 
-      // Vertex Shader
+      // Vertex Shader Injection
       shader.vertexShader = `
         uniform float uScale;
         varying float vDisplacement;
@@ -96,11 +96,11 @@ export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotCo
         vDisplacement = n;
 
         // Displace along normal
-        transformed += objectNormal * n * 0.01;
+        transformed += objectNormal * n * 0.015;
         `
       )
 
-      // Fragment Shader
+      // Fragment Shader Injection
       shader.fragmentShader = `
         uniform vec3 uColor;
         uniform vec3 uSpotColor;
@@ -115,7 +115,7 @@ export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotCo
         `
         #include <map_fragment>
 
-        // Spot Pattern using 3D position
+        // Spot Pattern using 3D position (Local Space)
         float n = snoise(vPos * uScale);
 
         // Irregular spots
@@ -127,6 +127,12 @@ export function JaguarFurMaterial({ uColor = new THREE.Color('#d49b5c'), uSpotCo
         // Fur shading (fake AO from displacement)
         float fur = vDisplacement * 0.5 + 0.5;
         finalColor = mix(finalColor * 0.8, finalColor * 1.1, fur);
+
+        // Soft Rim Light (Fake)
+        // Using view direction vs normal would be better, but vPos based gradient is cheaper/safer here
+        // Simple top-down gradient for "sun"
+        float topGradient = smoothstep(-1.0, 1.0, vPos.y);
+        finalColor += vec3(0.1, 0.08, 0.05) * topGradient;
 
         diffuseColor.rgb = finalColor;
         `

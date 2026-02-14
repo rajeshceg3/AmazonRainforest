@@ -31,7 +31,12 @@ class WindLayer {
     // Volume increases slightly with height (0 to 40)
     // Gentle mix: -45dB max
     const baseVol = THREE.MathUtils.mapLinear(pos.y, 0, 40, -55, -45)
-    this.noise.volume.rampTo(baseVol, 2.0)
+
+    // Gust Logic
+    const gust = Math.sin(time * 0.2) + Math.sin(time * 0.7 + 2.0)
+    const gustVol = (gust > 1.0) ? 5 : 0
+
+    this.noise.volume.rampTo(baseVol + gustVol, 2.0)
 
     // Subtle panning based on X position relative to center
     const pan = THREE.MathUtils.clamp(pos.x / 150, -0.4, 0.4)
@@ -413,18 +418,25 @@ class CreatureManager {
   playToucan(time) {
       // Rhythmic croak: "Rrrt... Rrrt"
       const note = "C3"
+
+      // Randomize timber
+      this.toucanSynth.detune.value = (Math.random() - 0.5) * 200
+
       this.toucanSynth.triggerAttackRelease(note, "16n", time)
       setTimeout(() => {
           this.toucanSynth.triggerAttackRelease(note, "16n", Tone.now())
-      }, 400)
+      }, 400 + Math.random() * 50)
   }
 
   playPiha(time) {
       // Screaming Piha: Slide up then down
       // Start high, go higher
-      const startFreq = 1200
+      const pitchVar = 0.9 + Math.random() * 0.2
+      const startFreq = 1200 * pitchVar
+      const endFreq = 1800 * pitchVar
+
       this.pihaSynth.triggerAttack(startFreq, time)
-      this.pihaSynth.frequency.rampTo(1800, 0.4, time)
+      this.pihaSynth.frequency.rampTo(endFreq, 0.4, time)
 
       // Stop
       this.pihaSynth.triggerRelease(time + 0.5)
@@ -432,14 +444,16 @@ class CreatureManager {
       // Second part usually follows
       setTimeout(() => {
           const t2 = Tone.now()
-          this.pihaSynth.triggerAttack(1500, t2)
-          this.pihaSynth.frequency.rampTo(1000, 0.3, t2)
+          this.pihaSynth.triggerAttack(1500 * pitchVar, t2)
+          this.pihaSynth.frequency.rampTo(1000 * pitchVar, 0.3, t2)
           this.pihaSynth.triggerRelease(t2 + 0.4)
-      }, 800)
+      }, 800 + Math.random() * 100)
   }
 
   playParrot(time) {
       // Short squawk
+      // Modulate envelope duration
+      this.parrotSynth.envelope.decay = 0.1 + Math.random() * 0.3
       this.parrotSynth.triggerAttackRelease("8n", time)
   }
 
@@ -485,6 +499,36 @@ class AmbienceLayer {
     }
 }
 
+// --- Deep Ambience Layer ---
+class DeepAmbienceLayer {
+  constructor(outputNode) {
+    this.output = outputNode
+    this.filter = new Tone.Filter(200, "lowpass").connect(this.output)
+    this.osc = new Tone.Oscillator(60, "sine").connect(this.filter)
+    this.osc.volume.value = -45
+    this.osc.start()
+
+    // Slight modulation for throbbing effect
+    this.lfo = new Tone.LFO(0.1, 58, 62).connect(this.osc.frequency).start()
+  }
+
+  update(pos, time) {
+    // Louder deep in the forest
+    if (pos.y < 20) {
+        this.osc.volume.rampTo(-40, 5)
+    } else {
+        this.osc.volume.rampTo(-50, 5)
+    }
+  }
+
+  dispose() {
+    this.osc.dispose()
+    this.lfo.dispose()
+    this.filter.dispose()
+  }
+}
+
+
 // --- Movement Layer ---
 class MovementLayer {
     constructor(outputNode) {
@@ -520,6 +564,8 @@ class FootstepsLayer {
     constructor(outputNode) {
         this.output = outputNode
         this.panner = new Tone.Panner(0).connect(this.output)
+
+        // 1. Thud (Brown Noise)
         this.filter = new Tone.Filter(800, "lowpass").connect(this.panner)
         this.gain = new Tone.Gain(0).connect(this.filter)
         this.noise = new Tone.Noise("brown").connect(this.gain)
@@ -531,6 +577,20 @@ class FootstepsLayer {
             sustain: 0,
             release: 0.1
         }).connect(this.gain.gain)
+
+        // 2. Snap (High pass white noise) for crisp twig sounds
+        this.snapFilter = new Tone.Filter(2000, "highpass").connect(this.panner)
+        this.snapGain = new Tone.Gain(0).connect(this.snapFilter)
+        this.snapNoise = new Tone.Noise("white").connect(this.snapGain)
+        this.snapNoise.volume.value = -12
+        this.snapNoise.start()
+
+        this.snapEnv = new Tone.Envelope({
+            attack: 0.005,
+            decay: 0.05,
+            sustain: 0,
+            release: 0.05
+        }).connect(this.snapGain.gain)
 
         this.lastPos = null
         this.distAcc = 0
@@ -555,9 +615,15 @@ class FootstepsLayer {
     }
 
     triggerStep(time) {
+        // Randomize Thud
         this.filter.frequency.value = 600 + Math.random() * 200
         this.panner.pan.value = (Math.random() - 0.5) * 0.2
         this.env.triggerAttackRelease(0.15, time)
+
+        // Randomize Snap (not every step)
+        if (Math.random() > 0.3) {
+             this.snapEnv.triggerAttackRelease(0.05, time)
+        }
     }
 
     dispose() {
@@ -565,6 +631,10 @@ class FootstepsLayer {
         this.filter.dispose()
         this.gain.dispose()
         this.env.dispose()
+        this.snapNoise.dispose()
+        this.snapFilter.dispose()
+        this.snapGain.dispose()
+        this.snapEnv.dispose()
         this.panner.dispose()
     }
 }
@@ -598,6 +668,7 @@ export class SoundscapeManager {
     this.insects = new InsectLayer(this.masterComp) // Renamed from cicadas for clarity
     this.creatures = new CreatureManager(this.masterComp)
     this.ambience = new AmbienceLayer(this.masterComp)
+    this.deepAmbience = new DeepAmbienceLayer(this.masterComp)
     this.wind = new WindLayer(this.masterComp)
     this.movement = new MovementLayer(this.masterComp)
     this.footsteps = new FootstepsLayer(this.masterComp)
@@ -629,6 +700,7 @@ export class SoundscapeManager {
     this.insects.update(p, time)
     this.creatures.update(p, time)
     this.ambience.update(p, time)
+    this.deepAmbience.update(p, time)
     this.wind.update(p, time)
     this.movement.update(p, time, speed)
     this.footsteps.update(p, time)
@@ -655,6 +727,7 @@ export class SoundscapeManager {
     this.insects.dispose()
     this.creatures.dispose()
     this.ambience.dispose()
+    this.deepAmbience.dispose()
     this.wind.dispose()
     this.movement.dispose()
     this.footsteps.dispose()

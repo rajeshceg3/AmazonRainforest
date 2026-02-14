@@ -3,7 +3,11 @@ import * as Tone from 'tone'
 const StartScreen = ({ onStart }) => {
   const handleStart = async () => {
     try {
-      await Tone.start()
+      // Attempt to start audio, but don't block indefinitely
+      await Promise.race([
+        Tone.start(),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ])
     } catch (e) {
       console.warn('Audio failed to start, proceeding anyway:', e)
     }
