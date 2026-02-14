@@ -1,6 +1,7 @@
 import { useRef, useMemo, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { pseudoNoise } from '../../utils/OrganicMath'
 
 // Procedural Geometry for Morpho Wing
 const useButterflyWingGeometry = () => {
@@ -54,11 +55,13 @@ const ButterflyMaterial = new THREE.ShaderMaterial({
     uTime: { value: 0 },
     uColor1: { value: new THREE.Color('#0077ff') }, // Morpho Blue
     uColor2: { value: new THREE.Color('#8800ff') }, // Iridescent Purple
-    uFlapSpeed: { value: 15.0 }
+    uFlapSpeed: { value: 15.0 },
+    uFlapStrength: { value: 1.0 }
   },
   vertexShader: `
     uniform float uTime;
     uniform float uFlapSpeed;
+    uniform float uFlapStrength;
     varying vec2 vUv;
     varying float vFresnel;
 
@@ -73,7 +76,7 @@ const ButterflyMaterial = new THREE.ShaderMaterial({
 
       float flap = sin(uTime * uFlapSpeed);
       flap = sign(flap) * pow(abs(flap), 0.8); // Snap
-      float angle = flap * 1.0;
+      float angle = flap * 1.0 * uFlapStrength;
 
       // Rigid rotation + Bending
       // Rotate around Y axis (Length axis)?
@@ -128,11 +131,12 @@ const ButterflyMaterial = new THREE.ShaderMaterial({
 const Butterfly = ({ position = [0, 0, 0] }) => {
   const group = useRef()
   const wingGeo = useButterflyWingGeometry()
+  const baseFlapSpeed = useRef(12.0 + Math.random() * 8.0)
 
   // Clone material for independent time/speed
   const material = useMemo(() => {
     const m = ButterflyMaterial.clone()
-    m.uniforms.uFlapSpeed.value = 12.0 + Math.random() * 8.0
+    m.uniforms.uFlapSpeed.value = baseFlapSpeed.current
     m.uniforms.uColor1.value = new THREE.Color().setHSL(0.6, 1.0, 0.5 + Math.random() * 0.2) // Blue var
     return m
   }, [])
@@ -144,6 +148,19 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
 
     if (material) {
       material.uniforms.uTime.value = t
+
+      // Variable Flap Speed: Glide occasionally
+      // Use noise to determine "effort"
+      const effort = pseudoNoise(t * 0.5, offset)
+      if (effort > 0.5) {
+          // Gliding or slow flap
+           material.uniforms.uFlapSpeed.value = THREE.MathUtils.lerp(material.uniforms.uFlapSpeed.value, 2.0, 0.1)
+           material.uniforms.uFlapStrength.value = THREE.MathUtils.lerp(material.uniforms.uFlapStrength.value, 0.2, 0.1)
+      } else {
+          // Flapping
+           material.uniforms.uFlapSpeed.value = THREE.MathUtils.lerp(material.uniforms.uFlapSpeed.value, baseFlapSpeed.current, 0.1)
+           material.uniforms.uFlapStrength.value = THREE.MathUtils.lerp(material.uniforms.uFlapStrength.value, 1.0, 0.1)
+      }
     }
 
     if (group.current) {
@@ -151,10 +168,15 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
         const radius = 3.0
         const speed = 0.5
 
-        // Complex Lissajous
-        const x = position[0] + Math.sin(t * speed) * radius + Math.sin(t * speed * 2.1) * 1.5
-        const y = position[1] + Math.cos(t * speed * 0.7) * 1.5 + Math.sin(t * speed * 1.3) * 0.8
-        const z = position[2] + Math.cos(t * speed * 1.1) * radius * 0.8
+        // Complex Lissajous + Noise turbulence
+        // Add low frequency wander + high frequency jitter
+        const wanderX = pseudoNoise(t * 0.2, offset) * 2.0
+        const wanderY = pseudoNoise(t * 0.3, offset + 10) * 1.5
+        const wanderZ = pseudoNoise(t * 0.25, offset + 20) * 2.0
+
+        const x = position[0] + Math.sin(t * speed) * radius + Math.sin(t * speed * 2.1) * 1.5 + wanderX
+        const y = position[1] + Math.cos(t * speed * 0.7) * 1.5 + Math.sin(t * speed * 1.3) * 0.8 + wanderY
+        const z = position[2] + Math.cos(t * speed * 1.1) * radius * 0.8 + wanderZ
 
         const targetPos = new THREE.Vector3(x, y, z)
 
@@ -173,6 +195,10 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
             // So +Z points to -velocity.
             const lookTarget = currentPos.clone().sub(velocity)
             group.current.lookAt(lookTarget)
+
+            // Add banking based on Y rotation delta?
+            // Simplified banking: Roll based on noise
+            group.current.rotation.z += pseudoNoise(t, offset) * 0.5
         }
     }
   })
