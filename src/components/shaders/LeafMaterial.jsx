@@ -62,6 +62,19 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
           g.yz = a0.yz * x12.xz + h.yz * x12.yw;
           return 130.0 * dot(m, g);
         }
+
+        // FBM
+        float leaf_fbm(vec2 p) {
+            float total = 0.0;
+            float amplitude = 0.5;
+            float frequency = 1.0;
+            for (int i = 0; i < 4; i++) {
+                total += leaf_snoise(p * frequency) * amplitude;
+                amplitude *= 0.5;
+                frequency *= 2.0;
+            }
+            return total;
+        }
       `
 
       // --- Vertex Shader Injection ---
@@ -80,8 +93,7 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
 
         // Calculate world position manually including instance matrix
         #ifdef USE_INSTANCING
-          vec4 worldPos = instanceMatrix * vec4(transformed, 1.0);
-          worldPos = modelMatrix * worldPos;
+          vec4 worldPos = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
         #else
           vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
         #endif
@@ -113,10 +125,16 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
         #include <color_fragment>
 
         #ifdef USE_UV
-            // Organic variation
-            float n = leaf_snoise(vUv * 10.0);
-            float vein = smoothstep(0.4, 0.5, abs(n));
-            diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.8, vein * 0.3);
+            // Organic variation using FBM
+            float n = leaf_fbm(vUv * 10.0);
+
+            // Veins (darker lines)
+            float vein = smoothstep(0.4, 0.55, abs(n - 0.5) * 2.0);
+            // Invert logic: smoothstep returns 0..1.
+            // We want veins to be dark.
+
+            // Add subtle noise to diffuse
+            diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.6, vein * 0.3);
 
             // Cloud Shadows
             float cloudNoise = leaf_snoise(vInstanceWorldPos.xz * 0.01 + vec2(uTime * 0.05, 0.0));
@@ -136,6 +154,9 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
 
             // Power curve to focus the effect (halo)
             float sss = pow(backLight, 6.0);
+
+            // Mask SSS with veins (thicker parts don't transmit light)
+            sss *= (1.0 - vein * 0.8);
 
             // Add SSS glow (Yellowish-Green)
             // Only apply if looking against the light

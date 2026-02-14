@@ -25,13 +25,13 @@ const Scene = ({ audioStarted }) => {
       camera={{ position: [0, 2, 10], fov: 45 }}
       style={{ background: '#051605' }} // Deep forest dark green
     >
-      {/* Fog for depth and atmosphere - adjusted for denser, moodier feel (Teal-ish) */}
-      <fog attach="fog" args={['#0a2a2a', 20, 180]} />
+      {/* Fog for depth and atmosphere - adjusted for denser, moodier feel (Organic Green) */}
+      <fog attach="fog" args={['#1a2b1a', 20, 180]} />
 
       <AudioController started={audioStarted} />
 
       {/* Environment Lighting replaces generic HemisphereLight for more realism */}
-      <Environment preset="forest" background={false} environmentIntensity={1.0} />
+      <Environment preset="forest" background={false} environmentIntensity={0.8} />
 
       {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
       <directionalLight
@@ -65,7 +65,7 @@ const Scene = ({ audioStarted }) => {
       <Cloud opacity={0.4} speed={0.05} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
 
       {/* Floating Particles (Pollen/Spores) - Reduced visual noise */}
-      <Sparkles count={3000} scale={[400, 50, 400]} size={2} speed={0.4} opacity={0.3} color="#ccffcc" />
+      <Sparkles count={3000} scale={[400, 50, 400]} size={1.5} speed={0.4} opacity={0.15} color="#ccffcc" />
 
       {/* Controlled Lightning - Very rare */}
       <Lightning />
