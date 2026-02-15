@@ -24,20 +24,23 @@ const Scene = ({ audioStarted }) => {
     <Canvas
       shadows
       camera={{ position: [0, 2, 10], fov: 45 }}
-      style={{ background: '#051605' }} // Deep forest dark green
+      style={{ background: '#031203' }} // Darker deep forest green
     >
-      {/* Fog for depth and atmosphere - adjusted for denser, moodier feel (Organic Green) */}
-      <fog attach="fog" args={['#052525', 10, 150]} />
+      {/* Safety ambient light to ensure visibility even if Environment fails to load */}
+      <ambientLight intensity={0.2} color="#052525" />
+
+      {/* Fog for depth and atmosphere - adjusted for moodier, less washed-out feel */}
+      <fog attach="fog" args={['#031818', 8, 140]} />
 
       <AudioController started={audioStarted} />
 
-      {/* Environment Lighting replaces generic HemisphereLight for more realism */}
-      <Environment preset="forest" background={false} environmentIntensity={1.2} />
+      {/* Environment Lighting - Reduced intensity for more dramatic shadows */}
+      <Environment preset="forest" background={false} environmentIntensity={0.8} />
 
-      {/* Main Sunlight - High intensity, warm, wide shadow coverage */}
+      {/* Main Sunlight - Adjusted angle for longer shadows and higher intensity for contrast */}
       <directionalLight
-        position={[50, 100, 50]}
-        intensity={2.5}
+        position={[80, 100, 30]}
+        intensity={3.0}
         color="#fff5e6" // Warm sunlight
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -48,25 +51,25 @@ const Scene = ({ audioStarted }) => {
 
       {/* Volumetric God Rays - Simulating sun shafts through canopy */}
       <SpotLight
-        position={[50, 80, 50]}
+        position={[80, 80, 30]}
         distance={300}
-        angle={0.6}
-        attenuation={20}
-        anglePower={5}
-        intensity={1.5}
-        color="#fff5e6"
-        opacity={0.3}
+        angle={0.5}
+        attenuation={25}
+        anglePower={7}
+        intensity={2.0}
+        color="#fffce6"
+        opacity={0.4}
       />
 
-      {/* Blue Fill Light for Contrast/Skylight */}
-      <pointLight position={[-50, 20, -50]} intensity={1.0} color="#6a7a8a" distance={300} decay={2} />
+      {/* Blue Fill Light for Contrast/Skylight - Dimmed slightly */}
+      <pointLight position={[-50, 20, -50]} intensity={0.6} color="#5a6a7a" distance={300} decay={2} />
 
       {/* Atmospheric Clouds - Denser for humid feel */}
-      <Cloud opacity={0.5} speed={0.1} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#d0e0d0" />
-      <Cloud opacity={0.4} speed={0.05} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#d0e0d0" />
+      <Cloud opacity={0.6} speed={0.15} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#c0d0c0" />
+      <Cloud opacity={0.5} speed={0.08} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#c0d0c0" />
 
-      {/* Floating Particles (Pollen/Spores) - Reduced visual noise */}
-      <Sparkles count={3000} scale={[400, 50, 400]} size={1.5} speed={0.4} opacity={0.15} color="#ccffcc" />
+      {/* Floating Particles (Pollen/Spores) */}
+      <Sparkles count={4000} scale={[400, 50, 400]} size={1.5} speed={0.5} opacity={0.2} color="#ccffcc" />
 
       {/* Controlled Lightning - Very rare */}
       <Lightning />
@@ -85,7 +88,6 @@ const Scene = ({ audioStarted }) => {
       <FallingLeaves count={300} />
 
       {/* Fauna */}
-      {/* Moved Jaguar closer and grounded */}
       <Jaguar position={[1, 0, -4]} />
       <PinkDolphin position={[0, -2, 0]} />
       <Sloth position={[5, 12, 5]} />
@@ -97,9 +99,9 @@ const Scene = ({ audioStarted }) => {
 
       {/* Soft contact shadows for grounding objects */}
       <ContactShadows
-        opacity={0.6}
+        opacity={0.7}
         scale={60}
-        blur={2.5}
+        blur={2.0}
         far={2.0}
         resolution={512}
         color="#000000"
@@ -107,13 +109,14 @@ const Scene = ({ audioStarted }) => {
 
       <EffectComposer disableNormalPass>
         {/* Depth of Field for cinematic look - Focuses around 15-20 units away */}
-        <DepthOfField focusDistance={0.015} focalLength={0.02} bokehScale={2} height={480} />
+        {/* Reduced bokeh scale to avoid aggressive blurring */}
+        <DepthOfField focusDistance={0.015} focalLength={0.02} bokehScale={1.5} height={480} />
 
         {/* Bloom for fireflies and sun glints - Increased for "stunning" glow */}
-        <Bloom luminanceThreshold={0.4} luminanceSmoothing={0.9} height={300} intensity={0.8} />
+        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.8} height={300} intensity={0.9} />
 
-        {/* Subtle Noise for organic film grain texture */}
-        <Noise opacity={0.02} />
+        {/* Subtle Noise for organic film grain texture - Increased for "grit" */}
+        <Noise opacity={0.03} />
 
         {/* Vignette to focus attention */}
         <Vignette eskil={false} offset={0.1} darkness={0.6} />

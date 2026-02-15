@@ -2,39 +2,39 @@ from playwright.sync_api import sync_playwright
 import time
 
 def run():
+    print("Starting Playwright...")
     with sync_playwright() as p:
         browser = p.chromium.launch()
+        print("Browser launched")
         page = browser.new_page()
+
+        # Capture console logs
+        page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
+        page.on("pageerror", lambda err: print(f"BROWSER ERROR: {err}"))
+
         try:
+            print("Navigating...")
             page.goto("http://localhost:5173", timeout=60000)
+            print("Loaded")
 
             # Click Enter Experience
             try:
                 page.get_by_text("ENTER EXPERIENCE").click(timeout=10000)
+                print("Clicked ENTER EXPERIENCE")
             except:
                 print("Could not find ENTER EXPERIENCE, maybe auto-started or stuck")
 
             # Wait for canvas
+            print("Waiting for canvas...")
             page.wait_for_selector("canvas", timeout=60000)
+            print("Canvas found")
 
-            # Wait for shaders
+            # Wait for shaders to compile and render
             time.sleep(10)
 
             # Screenshot 1: Default View
+            print("Taking screenshot 1")
             page.screenshot(path="verification_view1.png", timeout=120000)
-
-            # Scroll to move camera
-            page.mouse.wheel(0, 1000)
-            time.sleep(2)
-            page.screenshot(path="verification_view2.png", timeout=120000)
-
-            # Drag to move
-            page.mouse.move(400, 300)
-            page.mouse.down()
-            page.mouse.move(200, 300, steps=20)
-            page.mouse.up()
-            time.sleep(2)
-            page.screenshot(path="verification_view3.png", timeout=120000)
 
         except Exception as e:
             print(f"Error: {e}")

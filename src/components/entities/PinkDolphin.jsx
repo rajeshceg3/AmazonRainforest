@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { DolphinSkinMaterial } from '../shaders/DolphinSkinMaterial'
+import { pseudoNoise } from '../../utils/OrganicMath'
 
 const PinkDolphin = ({ position = [0, -2, 0] }) => {
   const group = useRef()
@@ -16,20 +17,42 @@ const PinkDolphin = ({ position = [0, -2, 0] }) => {
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
-    const swimSpeed = 2.0
 
-    // Circle path
+    // Organic Speed Modulation
+    // Bursts of speed vs lazy swimming
+    const speedNoise = pseudoNoise(t * 0.4, 123)
+    const swimSpeed = 2.0 + speedNoise * 1.5
+    const moveSpeed = 0.2 + speedNoise * 0.1
+
+    // Circle path with noise deviations
     if (group.current) {
-        const r = 12
-        group.current.position.x = position[0] + Math.sin(t * 0.2) * r
-        group.current.position.z = position[2] + Math.cos(t * 0.2) * r
-        group.current.rotation.y = t * 0.2 + Math.PI // Face forward along path
+        const r = 12 + pseudoNoise(t * 0.15, 0) * 4.0
+        const angle = t * moveSpeed + pseudoNoise(t * 0.1, 50) * 0.5
 
-        // Bobbing
-        group.current.position.y = position[1] + Math.sin(t * 0.8) * 0.3
+        const x = position[0] + Math.sin(angle) * r
+        const z = position[2] + Math.cos(angle) * r
+        const y = position[1] + Math.sin(t * 0.8) * 0.3 + pseudoNoise(t * 0.5, 99) * 0.5 // Depth variance
+
+        // Calculate target facing
+        const currentPos = group.current.position
+        const targetPos = new THREE.Vector3(x, y, z)
+        const dir = targetPos.clone().sub(currentPos).normalize()
+
+        group.current.position.copy(targetPos)
+
+        // Custom LookAt logic for smooth turning
+        // We can just use LookAt relative to velocity if we track it,
+        // but for now standard circle tangent + noise is okay.
+        // Actually, let's use the velocity vector we just calculated implicitly
+        const lookTarget = currentPos.clone().add(dir)
+        group.current.lookAt(lookTarget)
+
+        // Add Roll/Banking based on turn sharpness (noise)
+        const roll = pseudoNoise(t * 0.5, 20) * 0.8
+        group.current.rotation.z += roll
     }
 
-    // Undulation
+    // Undulation (Spine) - Modulated by speed
     if (torsoRef.current) torsoRef.current.rotation.x = Math.sin(t * swimSpeed) * 0.1
     if (headRef.current) headRef.current.rotation.x = Math.sin(t * swimSpeed + 0.5) * 0.05
     if (tailBaseRef.current) tailBaseRef.current.rotation.x = Math.sin(t * swimSpeed - 0.5) * 0.2
