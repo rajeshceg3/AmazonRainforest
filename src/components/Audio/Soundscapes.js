@@ -335,7 +335,105 @@ class InsectLayer {
     }
 }
 
-// --- Creature Manager (Birds & Frogs) ---
+// --- Frog Layer ---
+// FM Synth for croaks, triggered near water
+class FrogLayer {
+  constructor(outputNode) {
+    this.output = outputNode
+    this.panner = new Tone.Panner3D(0, 0, 0).connect(this.output)
+
+    this.synth = new Tone.FMSynth({
+      harmonicity: 3,
+      modulationIndex: 10,
+      detune: 0,
+      oscillator: { type: "sine" },
+      envelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 0.5 },
+      modulation: { type: "square" },
+      modulationEnvelope: { attack: 0.05, decay: 0.1, sustain: 0.1, release: 0.5 }
+    }).connect(this.panner)
+    this.synth.volume.value = -18
+
+    this.lastCroakTime = 0
+  }
+
+  update(pos, time) {
+    // Only frogs near water (y < 2) and reasonably close to center (x < 30)
+    if (pos.y < 5 && Math.abs(pos.x) < 40) {
+        if (time - this.lastCroakTime > 3 + Math.random() * 8) {
+            if (Math.random() > 0.5) {
+                // Random position near user
+                const angle = Math.random() * Math.PI * 2
+                const dist = 5 + Math.random() * 10
+                this.panner.positionX.value = pos.x + Math.cos(angle) * dist
+                this.panner.positionY.value = 0.5
+                this.panner.positionZ.value = pos.z + Math.sin(angle) * dist
+
+                // "Ribbit" - quick double note
+                const note = "F2"
+                this.synth.triggerAttackRelease(note, "16n", time)
+                setTimeout(() => {
+                    this.synth.triggerAttackRelease(note, "16n", Tone.now())
+                }, 150)
+
+                this.lastCroakTime = time
+            }
+        }
+    }
+  }
+
+  dispose() {
+    this.synth.dispose()
+    this.panner.dispose()
+  }
+}
+
+// --- Howler Monkey Layer ---
+// Distant, eerie howls
+class HowlerMonkeyLayer {
+  constructor(outputNode) {
+    this.output = outputNode
+    this.panner = new Tone.Panner(0).connect(this.output) // Distant, so simple panning is fine
+
+    this.filter = new Tone.Filter(800, "lowpass").connect(this.panner)
+
+    // Sawtooth for raw roar
+    this.synth = new Tone.Synth({
+        oscillator: { type: "sawtooth" },
+        envelope: { attack: 2, decay: 1, sustain: 1, release: 3 }
+    }).connect(this.filter)
+    this.synth.volume.value = -25
+
+    // Pitch LFO for the "Howl" (rising and falling)
+    this.lfo = new Tone.LFO(0.2, 100, 300).connect(this.synth.frequency).start()
+
+    this.lastHowlTime = 0
+  }
+
+  update(pos, time) {
+    // Rare event
+    if (time - this.lastHowlTime > 40 + Math.random() * 60) {
+        if (Math.random() > 0.3) {
+             // Pan randomly
+             this.panner.pan.value = (Math.random() - 0.5) * 1.5
+
+             // Trigger long note
+             const duration = 4 + Math.random() * 3
+             this.synth.triggerAttackRelease("C2", duration, time)
+
+             this.lastHowlTime = time
+        }
+    }
+  }
+
+  dispose() {
+    this.synth.dispose()
+    this.filter.dispose()
+    this.lfo.dispose()
+    this.panner.dispose()
+  }
+}
+
+// --- Creature Manager (Birds) ---
 class CreatureManager {
   constructor(outputNode) {
     this.output = outputNode
@@ -592,9 +690,16 @@ class FootstepsLayer {
             release: 0.05
         }).connect(this.snapGain.gain)
 
+        // 3. Splash (MetalSynth) - Water
+        this.splashSynth = new Tone.MetalSynth({
+            frequency: 200, envelope: { attack: 0.01, decay: 0.1, release: 0.3 },
+            harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5
+        }).connect(this.panner)
+        this.splashSynth.volume.value = -20
+
         this.lastPos = null
         this.distAcc = 0
-        this.stepInterval = 4.0
+        this.stepInterval = 2.5 // Shorter interval for walking
     }
 
     update(pos, time) {
@@ -607,22 +712,31 @@ class FootstepsLayer {
         this.distAcc += dist
 
         if (this.distAcc > this.stepInterval) {
-            this.triggerStep(time)
+            this.triggerStep(time, pos)
             this.distAcc = 0
         }
 
         this.lastPos.copy(pos)
     }
 
-    triggerStep(time) {
-        // Randomize Thud
-        this.filter.frequency.value = 600 + Math.random() * 200
+    triggerStep(time, pos) {
         this.panner.pan.value = (Math.random() - 0.5) * 0.2
-        this.env.triggerAttackRelease(0.15, time)
 
-        // Randomize Snap (not every step)
-        if (Math.random() > 0.3) {
-             this.snapEnv.triggerAttackRelease(0.05, time)
+        // Check for water (River valley is deep, water level ~ -0.5 to 0)
+        // If y < 0.2, assume wet/mud/water
+        if (pos.y < 0.2) {
+            // Splash sound
+            const freq = 300 + Math.random() * 200
+            this.splashSynth.triggerAttackRelease(freq, "32n", time)
+        } else {
+            // Regular step
+            this.filter.frequency.value = 600 + Math.random() * 200
+            this.env.triggerAttackRelease(0.15, time)
+
+            // Random Twig Snap
+            if (Math.random() > 0.4) {
+                 this.snapEnv.triggerAttackRelease(0.05, time)
+            }
         }
     }
 
@@ -635,6 +749,7 @@ class FootstepsLayer {
         this.snapFilter.dispose()
         this.snapGain.dispose()
         this.snapEnv.dispose()
+        this.splashSynth.dispose()
         this.panner.dispose()
     }
 }
@@ -667,6 +782,8 @@ export class SoundscapeManager {
     this.rain = new RainLayer(this.masterComp)
     this.insects = new InsectLayer(this.masterComp) // Renamed from cicadas for clarity
     this.creatures = new CreatureManager(this.masterComp)
+    this.frogs = new FrogLayer(this.masterComp)
+    this.howlers = new HowlerMonkeyLayer(this.masterComp)
     this.ambience = new AmbienceLayer(this.masterComp)
     this.deepAmbience = new DeepAmbienceLayer(this.masterComp)
     this.wind = new WindLayer(this.masterComp)
@@ -699,6 +816,8 @@ export class SoundscapeManager {
     this.rain.update(p, time)
     this.insects.update(p, time)
     this.creatures.update(p, time)
+    this.frogs.update(p, time)
+    this.howlers.update(p, time)
     this.ambience.update(p, time)
     this.deepAmbience.update(p, time)
     this.wind.update(p, time)
@@ -726,6 +845,8 @@ export class SoundscapeManager {
     this.rain.dispose()
     this.insects.dispose()
     this.creatures.dispose()
+    this.frogs.dispose()
+    this.howlers.dispose()
     this.ambience.dispose()
     this.deepAmbience.dispose()
     this.wind.dispose()

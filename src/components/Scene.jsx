@@ -108,9 +108,9 @@ const Scene = ({ audioStarted }) => {
       />
 
       <EffectComposer disableNormalPass>
-        {/* Depth of Field for cinematic look - Focuses around 15-20 units away */}
+        {/* Depth of Field for cinematic look - Focuses closer (hands/ground) for immersion */}
         {/* Reduced bokeh scale to avoid aggressive blurring */}
-        <DepthOfField focusDistance={0.015} focalLength={0.02} bokehScale={1.5} height={480} />
+        <DepthOfField focusDistance={0.01} focalLength={0.02} bokehScale={1.5} height={480} />
 
         {/* Bloom for fireflies and sun glints - Increased for "stunning" glow */}
         <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.8} height={300} intensity={0.9} />

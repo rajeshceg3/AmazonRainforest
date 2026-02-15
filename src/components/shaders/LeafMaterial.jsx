@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaMask = 0.0, ...props }) {
+export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaMask = 0.0, uTranslucency = 0.6, ...props }) {
   const materialRef = useRef()
 
   // Uniforms ref to hold values and be accessible in useFrame
@@ -10,7 +10,8 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
     uTime: { value: 0 },
     uWindStrength: { value: uWindStrength },
     uWindSpeed: { value: uWindSpeed },
-    uUseAlphaMask: { value: uUseAlphaMask }
+    uUseAlphaMask: { value: uUseAlphaMask },
+    uTranslucency: { value: uTranslucency }
   })
 
   // Update uniforms when props change
@@ -19,8 +20,9 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
         uniforms.current.uWindStrength.value = uWindStrength
         uniforms.current.uWindSpeed.value = uWindSpeed
         uniforms.current.uUseAlphaMask.value = uUseAlphaMask
+        uniforms.current.uTranslucency.value = uTranslucency
     }
-  }, [uWindStrength, uWindSpeed, uUseAlphaMask])
+  }, [uWindStrength, uWindSpeed, uUseAlphaMask, uTranslucency])
 
   // Update time every frame
   useFrame((state) => {
@@ -35,6 +37,7 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
       shader.uniforms.uWindStrength = uniforms.current.uWindStrength
       shader.uniforms.uWindSpeed = uniforms.current.uWindSpeed
       shader.uniforms.uUseAlphaMask = uniforms.current.uUseAlphaMask
+      shader.uniforms.uTranslucency = uniforms.current.uTranslucency
 
       // Common Noise Function (2D)
       const noiseFunc = `
@@ -120,6 +123,7 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
       shader.fragmentShader = `
         uniform float uTime;
         uniform float uUseAlphaMask;
+        uniform float uTranslucency;
         varying vec3 vInstanceWorldPos;
         ${noiseFunc}
       ` + shader.fragmentShader
@@ -144,24 +148,29 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
             float cloudShadow = smoothstep(0.0, 0.6, cloudNoise);
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.4, cloudShadow * 0.7);
 
-            // --- Fake Subsurface Scattering (SSS) ---
-            // Sun Direction (hardcoded to match Scene.jsx light)
-            vec3 sunDir = normalize(vec3(50.0, 100.0, 50.0));
+            // --- Accurate Subsurface Scattering (SSS) ---
+            // Sun Direction (hardcoded to match Scene.jsx light: 80, 100, 30)
+            vec3 sunDir = normalize(vec3(80.0, 100.0, 30.0));
 
             // View Direction (Camera to Fragment)
             vec3 worldViewDir = normalize(cameraPosition - vInstanceWorldPos);
 
-            // Backlighting effect
-            float backLight = max(0.0, dot(worldViewDir, sunDir));
+            // Transmission: Light traveling through the leaf towards the camera
+            // Light vector is -sunDir. View vector is worldViewDir.
+            // Alignment = dot(worldViewDir, -sunDir)
+            float transmission = max(0.0, dot(worldViewDir, -sunDir));
 
             // Power curve to focus the effect (halo)
-            float sss = pow(backLight, 6.0);
+            float sss = pow(transmission, 3.0);
 
-            // Mask SSS with veins
-            sss *= (1.0 - vein * 0.8);
+            // Mask SSS with veins (thick parts block light)
+            sss *= (1.0 - vein * 0.9);
 
-            // Add SSS glow (Yellowish-Green)
-            diffuseColor.rgb += vec3(0.5, 0.7, 0.2) * sss * 0.8;
+            // Translucency Color (Yellowish-Green boost)
+            vec3 sssColor = vec3(0.6, 0.8, 0.1) * 2.0;
+
+            // Add SSS glow based on uTranslucency
+            diffuseColor.rgb += sssColor * sss * uTranslucency;
 
             // Soft Edge Alpha (Disabled if uUseAlphaMask <= 0.5)
             if (uUseAlphaMask > 0.5) {
