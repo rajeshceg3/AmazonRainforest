@@ -27,20 +27,21 @@ const Scene = ({ audioStarted }) => {
       style={{ background: '#031203' }} // Darker deep forest green
     >
       {/* Safety ambient light to ensure visibility even if Environment fails to load */}
-      <ambientLight intensity={0.2} color="#052525" />
+      {/* Reduced for richer shadows */}
+      <ambientLight intensity={0.4} color="#052525" />
 
-      {/* Fog for depth and atmosphere - adjusted for moodier, less washed-out feel */}
-      <fog attach="fog" args={['#031818', 8, 140]} />
+      {/* Fog for depth and atmosphere - Denser and closer start for intimacy */}
+      <fog attach="fog" args={['#031818', 10, 120]} />
 
       <AudioController started={audioStarted} />
 
       {/* Environment Lighting - Reduced intensity for more dramatic shadows */}
-      <Environment preset="forest" background={false} environmentIntensity={0.8} />
+      <Environment preset="forest" background={false} environmentIntensity={0.6} />
 
-      {/* Main Sunlight - Adjusted angle for longer shadows and higher intensity for contrast */}
+      {/* Main Sunlight - High intensity for contrast */}
       <directionalLight
         position={[80, 100, 30]}
-        intensity={3.0}
+        intensity={4.5} // Increased
         color="#fff5e6" // Warm sunlight
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -49,27 +50,27 @@ const Scene = ({ audioStarted }) => {
         <orthographicCamera attach="shadow-camera" args={[-200, 200, 200, -200, 0.1, 500]} />
       </directionalLight>
 
-      {/* Volumetric God Rays - Simulating sun shafts through canopy */}
+      {/* Volumetric God Rays - Stunning effect */}
       <SpotLight
         position={[80, 80, 30]}
         distance={300}
         angle={0.5}
         attenuation={25}
         anglePower={7}
-        intensity={2.0}
+        intensity={4.0} // Increased significantly
         color="#fffce6"
-        opacity={0.4}
+        opacity={0.6} // More visible
       />
 
       {/* Blue Fill Light for Contrast/Skylight - Dimmed slightly */}
-      <pointLight position={[-50, 20, -50]} intensity={0.6} color="#5a6a7a" distance={300} decay={2} />
+      <pointLight position={[-50, 20, -50]} intensity={0.5} color="#5a6a7a" distance={300} decay={2} />
 
       {/* Atmospheric Clouds - Denser for humid feel */}
       <Cloud opacity={0.6} speed={0.15} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#c0d0c0" />
       <Cloud opacity={0.5} speed={0.08} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#c0d0c0" />
 
       {/* Floating Particles (Pollen/Spores) */}
-      <Sparkles count={4000} scale={[400, 50, 400]} size={1.5} speed={0.5} opacity={0.2} color="#ccffcc" />
+      <Sparkles count={4000} scale={[400, 50, 400]} size={2.0} speed={0.5} opacity={0.3} color="#ccffcc" />
 
       {/* Controlled Lightning - Very rare */}
       <Lightning />
@@ -110,13 +111,13 @@ const Scene = ({ audioStarted }) => {
       <EffectComposer disableNormalPass>
         {/* Depth of Field for cinematic look - Focuses closer (hands/ground) for immersion */}
         {/* Reduced bokeh scale to avoid aggressive blurring */}
-        <DepthOfField focusDistance={0.01} focalLength={0.02} bokehScale={1.5} height={480} />
+        <DepthOfField focusDistance={0.01} focalLength={0.02} bokehScale={2.0} height={480} />
 
         {/* Bloom for fireflies and sun glints - Increased for "stunning" glow */}
-        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.8} height={300} intensity={0.9} />
+        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.8} height={300} intensity={1.2} />
 
         {/* Subtle Noise for organic film grain texture - Increased for "grit" */}
-        <Noise opacity={0.03} />
+        <Noise opacity={0.04} />
 
         {/* Vignette to focus attention */}
         <Vignette eskil={false} offset={0.1} darkness={0.6} />

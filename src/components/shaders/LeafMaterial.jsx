@@ -166,8 +166,9 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
             // Mask SSS with veins (thick parts block light)
             sss *= (1.0 - vein * 0.9);
 
-            // Translucency Color (Yellowish-Green boost)
-            vec3 sssColor = vec3(0.6, 0.8, 0.1) * 2.0;
+            // Translucency Color
+            // Use Diffuse Color (Albedo) as base for SSS to support different flower/leaf colors
+            vec3 sssColor = diffuseColor.rgb * 1.5 + vec3(0.05, 0.05, 0.0);
 
             // Add SSS glow based on uTranslucency
             diffuseColor.rgb += sssColor * sss * uTranslucency;
