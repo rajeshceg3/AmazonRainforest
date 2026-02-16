@@ -30,7 +30,7 @@ def run():
             print("Canvas found")
 
             # Wait for shaders to compile and render
-            time.sleep(10)
+            time.sleep(15)
 
             # Screenshot 1: Default View
             print("Taking screenshot 1")

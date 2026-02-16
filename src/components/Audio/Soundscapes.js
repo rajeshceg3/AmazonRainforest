@@ -1,5 +1,6 @@
 import * as Tone from 'tone'
 import * as THREE from 'three'
+import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 // --- Wind Layer ---
 // Gentle, filtered noise for wind texture
@@ -27,7 +28,7 @@ class WindLayer {
     this.noise.start()
   }
 
-  update(pos, time) {
+  update(pos, time, quat) {
     // Volume increases slightly with height (0 to 40)
     // Gentle mix: -45dB max
     const baseVol = THREE.MathUtils.mapLinear(pos.y, 0, 40, -55, -45)
@@ -38,9 +39,22 @@ class WindLayer {
 
     this.noise.volume.rampTo(baseVol + gustVol, 2.0)
 
-    // Subtle panning based on X position relative to center
-    const pan = THREE.MathUtils.clamp(pos.x / 150, -0.4, 0.4)
-    this.panner.pan.rampTo(pan, 0.5)
+    // Directional Panning
+    // Assume wind blows from North (-Z)
+    // Vector from player to wind source is (0, 0, -1) roughly (ambient)
+    // Or better, wind is everywhere, but gusts might have direction.
+    // Let's pan slightly based on facing North vs South.
+    // If facing North (Forward = -Z), Wind is "in face" (Center).
+    // If facing East (Forward = +X), Wind is "Left".
+
+    if (quat) {
+        // Wind vector (From North to South) -> Source is North (0, 0, -100)
+        // Vector relative to camera
+        const windDir = new THREE.Vector3(0, 0, -1).applyQuaternion(quat.clone().invert())
+        // x component gives Left/Right balance
+        const pan = THREE.MathUtils.clamp(windDir.x * 0.5, -0.4, 0.4)
+        this.panner.pan.rampTo(pan, 0.5)
+    }
   }
 
   dispose() {
@@ -85,7 +99,7 @@ class RiverLayer {
     this.lastBubbleTime = 0
   }
 
-  update(pos, time) {
+  update(pos, time, quat) {
     // River assumed at X=0, running along Z
     const dist = Math.abs(pos.x)
 
@@ -99,9 +113,34 @@ class RiverLayer {
     this.rumble.volume.rampTo(clampedVol, 0.2)
     this.rushNoise.volume.rampTo(clampedVol - 5, 0.2)
 
-    // Panning
-    const pan = THREE.MathUtils.clamp((0 - pos.x) / 40, -0.8, 0.8)
-    this.panner.pan.rampTo(pan, 0.1)
+    // Spatial Panning
+    if (quat) {
+        // Vector from camera to river closest point (0, pos.y, pos.z)
+        // Global Vector = (0 - pos.x, 0, 0) = (-pos.x, 0, 0)
+        const toRiver = new THREE.Vector3(-pos.x, 0, 0)
+
+        // Transform to Camera Space
+        toRiver.applyQuaternion(quat.clone().invert())
+        toRiver.normalize() // Get direction
+
+        // x component is Left(-1)/Right(1)
+        // If dist is small (inside river), sound is everywhere (spread).
+        // If dist is large, sound is point source.
+        // Tone.Panner pan value.
+
+        let pan = toRiver.x
+
+        // If we are VERY close, spread it out (center it)
+        if (dist < 10) {
+            pan *= (dist / 10)
+        }
+
+        this.panner.pan.rampTo(THREE.MathUtils.clamp(pan, -1, 1), 0.1)
+    } else {
+        // Fallback to old simple panning
+        const pan = THREE.MathUtils.clamp((0 - pos.x) / 40, -0.8, 0.8)
+        this.panner.pan.rampTo(pan, 0.1)
+    }
 
     // Bubbles near water (closer than 15 units)
     if (dist < 15 && time - this.lastBubbleTime > 0.2 + Math.random() * 0.5) {
@@ -708,6 +747,14 @@ class FootstepsLayer {
             return
         }
 
+        // Only trigger if close to ground
+        const groundH = getTerrainHeight(pos.x, pos.z)
+        if (pos.y > groundH + 3.0) {
+            // Flying, silence footsteps
+            this.lastPos.copy(pos)
+            return
+        }
+
         const dist = pos.distanceTo(this.lastPos)
         this.distAcc += dist
 
@@ -806,11 +853,11 @@ export class SoundscapeManager {
     Tone.Transport.start()
   }
 
-  update(pos, speed = 0) {
+  update(pos, speed = 0, quat = null) {
     const p = (typeof pos === 'number') ? new THREE.Vector3(0, pos, 0) : pos
     const time = Tone.now()
 
-    this.river.update(p, time)
+    this.river.update(p, time, quat)
     this.canopy.update(p, time)
     this.wood.update(p, time)
     this.rain.update(p, time)
@@ -820,7 +867,7 @@ export class SoundscapeManager {
     this.howlers.update(p, time)
     this.ambience.update(p, time)
     this.deepAmbience.update(p, time)
-    this.wind.update(p, time)
+    this.wind.update(p, time, quat)
     this.movement.update(p, time, speed)
     this.footsteps.update(p, time)
   }

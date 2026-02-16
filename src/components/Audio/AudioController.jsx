@@ -21,7 +21,7 @@ const AudioController = ({ started }) => {
     }
 
     return () => {
-      // Cleanup when component unmounts or started changes (though started only goes false -> true)
+      // Cleanup when component unmounts or started changes
       if (managerRef.current) {
         managerRef.current.dispose()
         managerRef.current = null
@@ -39,7 +39,8 @@ const AudioController = ({ started }) => {
       // Filter out large jumps (teleportation) or first frame
       const speed = (dist < 50) ? dist / Math.max(delta, 0.001) : 0
 
-      managerRef.current.update(currentPos, speed)
+      // Pass camera quaternion for spatialization
+      managerRef.current.update(currentPos, speed, camera.quaternion)
 
       lastPos.current.copy(currentPos)
     }
