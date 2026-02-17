@@ -1,45 +1,35 @@
 from playwright.sync_api import sync_playwright
 import time
 
-def run():
-    print("Starting Playwright...")
+def verify_scene():
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        print("Browser launched")
+        browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        # Capture console logs
-        page.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
-        page.on("pageerror", lambda err: print(f"BROWSER ERROR: {err}"))
+        page.goto("http://localhost:5173")
 
         try:
-            print("Navigating...")
-            page.goto("http://localhost:5173", timeout=60000)
-            print("Loaded")
+            button = page.get_by_text("ENTER EXPERIENCE")
+            button.click()
+            print("Clicked enter button")
+        except:
+            print("Could not find start button")
 
-            # Click Enter Experience
-            try:
-                page.get_by_text("ENTER EXPERIENCE").click(timeout=10000)
-                print("Clicked ENTER EXPERIENCE")
-            except:
-                print("Could not find ENTER EXPERIENCE, maybe auto-started or stuck")
+        print("Waiting for scene...")
+        time.sleep(15)
 
-            # Wait for canvas
-            print("Waiting for canvas...")
-            page.wait_for_selector("canvas", timeout=60000)
-            print("Canvas found")
+        # Drag to look up
+        print("Looking up...")
+        page.mouse.move(640, 360)
+        page.mouse.down()
+        page.mouse.move(640, 100, steps=10) # Drag up
+        page.mouse.up()
 
-            # Wait for shaders to compile and render
-            time.sleep(10)
+        time.sleep(2)
 
-            # Screenshot 1: Default View
-            print("Taking screenshot 1")
-            page.screenshot(path="verification_view1.png", timeout=120000)
+        page.screenshot(path="verification_look_up.png")
 
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            browser.close()
+        browser.close()
 
 if __name__ == "__main__":
-    run()
+    verify_scene()

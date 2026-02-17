@@ -16,10 +16,6 @@ const useButterflyWingGeometry = () => {
       v.fromBufferAttribute(pos, i)
       // v.x is -0.5 to 0.5. v.y is -0.5 to 0.5.
 
-      // We want pivot at (0, 0) in local space (after we shift vertices)
-      // Actually let's assume the mesh is positioned such that x=0 is the body.
-      // So we want the wing to start at x=0 and go to x=1 (or similar).
-
       // Normalize X to 0..1 (assuming width 1)
       let nx = v.x + 0.5
       let ny = v.y + 0.5
@@ -50,7 +46,7 @@ const useButterflyWingGeometry = () => {
 }
 
 // Custom Shader Material for Iridescence
-const ButterflyMaterial = new THREE.ShaderMaterial({
+const ButterflyMaterialBase = new THREE.ShaderMaterial({
   uniforms: {
     uTime: { value: 0 },
     uColor1: { value: new THREE.Color('#0077ff') }, // Morpho Blue
@@ -79,11 +75,6 @@ const ButterflyMaterial = new THREE.ShaderMaterial({
       float angle = flap * 1.0 * uFlapStrength;
 
       // Rigid rotation + Bending
-      // Rotate around Y axis (Length axis)?
-      // If plane is X(width) Y(length). Z is up/down.
-      // We want to rotate around Y axis.
-      // z' = x * sin(angle)
-
       pos.z += pos.x * sin(angle);
 
       // Secondary flutter
@@ -133,9 +124,12 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
   const wingGeo = useButterflyWingGeometry()
   const baseFlapSpeed = useRef(12.0 + Math.random() * 8.0)
 
-  // Clone material for independent time/speed
+  // Clone material properly using UniformsUtils to ensure deep copy of uniforms
   const material = useMemo(() => {
-    const m = ButterflyMaterial.clone()
+    const m = ButterflyMaterialBase.clone()
+    m.uniforms = THREE.UniformsUtils.clone(ButterflyMaterialBase.uniforms)
+
+    // Set unique values
     m.uniforms.uFlapSpeed.value = baseFlapSpeed.current
     m.uniforms.uColor1.value = new THREE.Color().setHSL(0.6, 1.0, 0.5 + Math.random() * 0.2) // Blue var
     return m
