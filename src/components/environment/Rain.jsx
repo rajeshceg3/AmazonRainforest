@@ -14,6 +14,8 @@ const Rain = ({ count = 6000 }) => {
         uSpeed: { value: 25.0 }
       },
       vertexShader: `
+        #include <common>
+
         uniform float uTime;
         uniform float uHeight;
         uniform float uSpeed;
@@ -27,30 +29,16 @@ const Rain = ({ count = 6000 }) => {
           vUv = uv;
 
           // 1. Instance Position
-          // Extract translation from instance matrix
-          vec3 instPos = instanceMatrix[3].xyz;
+          // Extract translation from instanceMatrix (column 3)
+          vec3 instPos = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);
 
           // Animate Falling
           float speed = uSpeed + aRandom * 15.0; // Varied speed
           float yOffset = uTime * speed;
 
           // Calculate wrapped Y
-          // Assuming initial Y is 0 to uHeight?
-          // Actually we spawn them in a box.
-          // instPos.y is fixed. We subtract offset.
-          // We need modulo to keep them in [0, uHeight] or relative.
-
           float currentY = instPos.y - yOffset;
-          // Wrap around uHeight.
-          // We want range [0, uHeight] roughly.
           float wrappedY = mod(currentY, uHeight);
-
-          // If instPos.y varies, this works if we treat uHeight as the "domain size".
-          // Let's assume uHeight is 30. wrappedY is 0..30.
-          // We want rain to cover the scene.
-          // We'll recenter it vertically if needed, but 0..30 is fine (ground to tree top).
-          // Maybe shift it down a bit?
-          // Let's just use it as is.
 
           vec3 center = vec3(instPos.x, wrappedY, instPos.z);
 
@@ -73,14 +61,13 @@ const Rain = ({ count = 6000 }) => {
           localPos.x = rx;
           localPos.z = rz;
 
-          // 3. Final Position
-          vec3 worldPos = center + localPos;
-
-          // 4. Wind / Tilt
+          // 3. Wind / Tilt
           // Add slight slant based on wind
           float wind = 1.0; // Constant wind
-          worldPos.x += (localPos.y) * wind * 0.5;
-          // This tilts the streak.
+          localPos.x += localPos.y * 0.5 * wind;
+
+          // 4. Final Position
+          vec3 worldPos = center + localPos;
 
           vec4 mvPosition = viewMatrix * vec4(worldPos, 1.0);
           gl_Position = projectionMatrix * mvPosition;
@@ -144,8 +131,9 @@ const Rain = ({ count = 6000 }) => {
   return (
     <instancedMesh ref={mesh} args={[null, null, count]}>
       {/* Very thin, long streaks */}
-      <planeGeometry args={[0.02, 2.0]} />
-      <instancedBufferAttribute attach="attributes-aRandom" args={[randoms, 1]} />
+      <planeGeometry args={[0.02, 2.0]}>
+        <instancedBufferAttribute attach="attributes-aRandom" args={[randoms, 1]} />
+      </planeGeometry>
       <primitive object={material} attach="material" />
     </instancedMesh>
   )

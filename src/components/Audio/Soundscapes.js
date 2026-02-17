@@ -637,23 +637,50 @@ class MovementLayer {
         this.noise = new Tone.Noise("pink").connect(this.filter)
         this.noise.volume.value = -100
         this.noise.start()
+
+        // Bubbles for wading (AM Oscillator for gurgle)
+        this.wadeFilter = new Tone.Filter(400, "lowpass").connect(this.output)
+        this.wadeOsc = new Tone.AMOscillator({
+             type: "sine",
+             modulationType: "sine",
+             harmonicity: 0.5,
+             modulationIndex: 10
+        }).connect(this.wadeFilter).start()
+        this.wadeOsc.volume.value = -100
     }
 
     update(pos, time, speed) {
+        // Wading check (Deep water < -0.4)
+        const isWading = pos.y < -0.4;
+
         // Only audible when moving fast enough
         if (speed > 0.2) {
              const targetVol = THREE.MathUtils.mapLinear(Math.min(speed, 10), 0, 10, -60, -25)
-             this.noise.volume.rampTo(targetVol, 0.1)
-             // Open filter slightly with speed
-             this.filter.frequency.rampTo(600 + speed * 50, 0.1)
+
+             if (isWading) {
+                 // Wading sound
+                 this.noise.volume.rampTo(-100, 0.5) // Fade out dry noise
+
+                 const wadeVol = THREE.MathUtils.mapLinear(Math.min(speed, 5), 0, 5, -50, -20)
+                 this.wadeOsc.volume.rampTo(wadeVol, 0.1)
+                 this.wadeOsc.frequency.rampTo(100 + speed * 20, 0.1)
+             } else {
+                 // Dry sound
+                 this.noise.volume.rampTo(targetVol, 0.1)
+                 this.filter.frequency.rampTo(600 + speed * 50, 0.1)
+                 this.wadeOsc.volume.rampTo(-100, 0.5)
+             }
         } else {
              this.noise.volume.rampTo(-100, 0.2)
+             this.wadeOsc.volume.rampTo(-100, 0.2)
         }
     }
 
     dispose() {
         this.noise.dispose()
         this.filter.dispose()
+        this.wadeOsc.dispose()
+        this.wadeFilter.dispose()
     }
 }
 
@@ -723,8 +750,8 @@ class FootstepsLayer {
         this.panner.pan.value = (Math.random() - 0.5) * 0.2
 
         // Check for water (River valley is deep, water level ~ -0.5 to 0)
-        // If y < 0.2, assume wet/mud/water
-        if (pos.y < 0.2) {
+        // If y < -0.2 (was 0.2), assume wet/mud/water
+        if (pos.y < -0.2) {
             // Splash sound
             const freq = 300 + Math.random() * 200
             this.splashSynth.triggerAttackRelease(freq, "32n", time)
