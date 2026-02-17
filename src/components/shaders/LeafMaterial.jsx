@@ -83,13 +83,17 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
       `
 
       // --- Vertex Shader Injection ---
-      shader.vertexShader = `
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `
+        #include <common>
         uniform float uTime;
         uniform float uWindStrength;
         uniform float uWindSpeed;
         varying vec3 vInstanceWorldPos;
         ${noiseFunc}
-      ` + shader.vertexShader
+        `
+      )
 
       shader.vertexShader = shader.vertexShader.replace(
         '#include <begin_vertex>',
@@ -101,6 +105,7 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
 
         #ifdef USE_INSTANCING
           vec4 worldPos = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+          // Use instance position for random phase
           randomPhase = sin(instanceMatrix[3][0] * 12.9898 + instanceMatrix[3][2] * 78.233);
         #else
           vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
@@ -111,7 +116,18 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
         float windNoise = leaf_snoise(worldPos.xz * 0.1 + uTime * uWindSpeed * 0.5);
         float windGust = smoothstep(0.0, 1.0, windNoise);
 
-        float bend = uv.y * uWindStrength * (0.1 + windGust * 0.2);
+        // Bend factor based on UV.y (assuming pivot at bottom 0, top 1)
+        // or for centered planes (pivot center), we might use (uv.y - 0.5)?
+        // In ForestFloor, ferns pivot at bottom.
+        // Let's assume geometry is set up for pivot at y=0 or similar.
+        // Actually ForestFloor geometries are translated so y=0 is bottom.
+        // So transformed.y is height.
+        // But here we use 'bend' logic.
+
+        float bend = transformed.y * uWindStrength * (0.1 + windGust * 0.2);
+
+        // Apply simple bending (rotate around X/Z)
+        // transformed.x += ...
 
         transformed.x += sin(uTime * 2.0 + worldPos.x + randomPhase * 10.0) * bend;
         transformed.z += cos(uTime * 1.5 + worldPos.z + randomPhase * 10.0) * bend;
@@ -120,13 +136,17 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
       )
 
       // --- Fragment Shader Injection ---
-      shader.fragmentShader = `
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <common>',
+        `
+        #include <common>
         uniform float uTime;
         uniform float uUseAlphaMask;
         uniform float uTranslucency;
         varying vec3 vInstanceWorldPos;
         ${noiseFunc}
-      ` + shader.fragmentShader
+        `
+      )
 
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <color_fragment>',
@@ -148,30 +168,6 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
             float cloudShadow = smoothstep(0.0, 0.6, cloudNoise);
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.4, cloudShadow * 0.7);
 
-            // --- Accurate Subsurface Scattering (SSS) ---
-            // Sun Direction (hardcoded to match Scene.jsx light: 80, 100, 30)
-            vec3 sunDir = normalize(vec3(80.0, 100.0, 30.0));
-
-            // View Direction (Camera to Fragment)
-            vec3 worldViewDir = normalize(cameraPosition - vInstanceWorldPos);
-
-            // Transmission: Light traveling through the leaf towards the camera
-            // Light vector is -sunDir. View vector is worldViewDir.
-            // Alignment = dot(worldViewDir, -sunDir)
-            float transmission = max(0.0, dot(worldViewDir, -sunDir));
-
-            // Power curve to focus the effect (halo)
-            float sss = pow(transmission, 3.0);
-
-            // Mask SSS with veins (thick parts block light)
-            sss *= (1.0 - vein * 0.9);
-
-            // Translucency Color (Yellowish-Green boost)
-            vec3 sssColor = vec3(0.6, 0.8, 0.1) * 2.0;
-
-            // Add SSS glow based on uTranslucency
-            diffuseColor.rgb += sssColor * sss * uTranslucency;
-
             // Soft Edge Alpha (Disabled if uUseAlphaMask <= 0.5)
             if (uUseAlphaMask > 0.5) {
                 float dist = distance(vUv, vec2(0.5));
@@ -181,6 +177,43 @@ export function LeafMaterial({ uWindStrength = 0.5, uWindSpeed = 1.0, uUseAlphaM
             }
         #endif
         `
+      )
+
+      // Inject SSS into Emissive (after lights calculation setup)
+      // totalEmissiveRadiance is defined in lights_fragment_begin
+      shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <lights_fragment_begin>',
+          `
+          #include <lights_fragment_begin>
+
+          #ifdef USE_UV
+            // Calculate SSS
+            // Sun Direction (hardcoded to match Scene.jsx light: 80, 100, 30)
+            vec3 sunDir = normalize(vec3(80.0, 100.0, 30.0));
+            vec3 viewDir = normalize(cameraPosition - vInstanceWorldPos);
+
+            // Transmission: Light passing through (Backlit)
+            // dot(viewDir, -sunDir) is 1 when looking at sun through leaf.
+            float trans = max(0.0, dot(viewDir, -sunDir));
+
+            // Power curve to focus the effect
+            trans = pow(trans, 3.0);
+
+            // Vein Mask (re-calculate or approximate)
+            // Using same FBM logic as above (cheap enough)
+            float n_sss = leaf_fbm(vUv * 10.0);
+            float vein_sss = smoothstep(0.4, 0.55, abs(n_sss - 0.5) * 2.0);
+
+            // Veins block light
+            trans *= (1.0 - vein_sss * 0.8);
+
+            // SSS Color (Yellowish-Green boost)
+            vec3 sssColor = vec3(0.5, 0.7, 0.1) * 2.0 * trans * uTranslucency;
+
+            // Add to totalEmissiveRadiance
+            totalEmissiveRadiance += sssColor;
+          #endif
+          `
       )
   }, [])
 
