@@ -7,21 +7,23 @@ const AudioController = ({ started }) => {
   const { camera } = useThree()
   const managerRef = useRef(null)
   const lastPos = useRef(new THREE.Vector3())
+  const lastY = useRef(10) // Init high
 
   useEffect(() => {
     if (!started) return
 
     // Initialize position to avoid startup pop
     lastPos.current.copy(camera.position)
+    lastY.current = camera.position.y
 
     // Initialize the SoundscapeManager
     if (!managerRef.current) {
         managerRef.current = new SoundscapeManager()
+        // Expose globally so entities can access master bus if needed (e.g. hummingbirds)
         window.soundscapeManager = managerRef.current
     }
 
     return () => {
-      // Cleanup when component unmounts or started changes (though started only goes false -> true)
       if (managerRef.current) {
         managerRef.current.dispose()
         managerRef.current = null
@@ -40,6 +42,14 @@ const AudioController = ({ started }) => {
       const speed = (dist < 50) ? dist / Math.max(delta, 0.001) : 0
 
       managerRef.current.update(currentPos, speed)
+
+      // Splash Logic: Water level approx 0.8
+      const waterLevel = 0.8
+      if ((lastY.current > waterLevel && currentPos.y <= waterLevel) ||
+          (lastY.current < waterLevel && currentPos.y >= waterLevel)) {
+           managerRef.current.triggerSplash(currentPos)
+      }
+      lastY.current = currentPos.y
 
       lastPos.current.copy(currentPos)
     }

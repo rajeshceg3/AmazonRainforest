@@ -18,6 +18,9 @@ import Rain from './environment/Rain'
 import Fireflies from './environment/Fireflies'
 import Lightning from './environment/Lightning'
 import FallingLeaves from './environment/FallingLeaves'
+import Mist from './environment/Mist'
+import PoisonDartFrog from './entities/PoisonDartFrog'
+import Hummingbird from './entities/Hummingbird'
 
 const Scene = ({ audioStarted }) => {
   return (
@@ -27,7 +30,7 @@ const Scene = ({ audioStarted }) => {
       style={{ background: '#031203' }} // Darker deep forest green
     >
       {/* Safety ambient light to ensure visibility even if Environment fails to load */}
-      <ambientLight intensity={0.2} color="#052525" />
+      <ambientLight intensity={0.4} color="#052525" />
 
       {/* Fog for depth and atmosphere - adjusted for moodier, less washed-out feel */}
       <fog attach="fog" args={['#031818', 8, 140]} />
@@ -86,8 +89,14 @@ const Scene = ({ audioStarted }) => {
       <Rain count={4000} />
       <Fireflies count={400} />
       <FallingLeaves count={300} />
+      <Mist />
 
       {/* Fauna */}
+      <PoisonDartFrog count={40} />
+      <Hummingbird position={[5, 4, 5]} />
+      <Hummingbird position={[-8, 6, 2]} />
+      <Hummingbird position={[0, 5, 12]} />
+
       <Jaguar position={[1, 0, -4]} />
       <PinkDolphin position={[0, -2, 0]} />
       <Sloth position={[5, 12, 5]} />

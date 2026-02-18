@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { BarkMaterial } from '../shaders/BarkMaterial.jsx'
 import { LeafMaterial } from '../shaders/LeafMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
+import Epiphytes from './Epiphytes'
 
 const TreeConfig = {
   count: 400,
@@ -227,6 +228,8 @@ const Canopy = () => {
           />
         ))}
       </Instances>
+
+      <Epiphytes trunks={trunks} />
     </group>
   )
 }
