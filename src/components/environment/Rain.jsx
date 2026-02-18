@@ -14,6 +14,9 @@ const Rain = ({ count = 6000 }) => {
         uSpeed: { value: 25.0 }
       },
       vertexShader: `
+        ${THREE.ShaderChunk.common}
+        ${THREE.ShaderChunk.instancing_pars_vertex}
+
         uniform float uTime;
         uniform float uHeight;
         uniform float uSpeed;
@@ -28,29 +31,19 @@ const Rain = ({ count = 6000 }) => {
 
           // 1. Instance Position
           // Extract translation from instance matrix
-          vec3 instPos = instanceMatrix[3].xyz;
+          #ifdef USE_INSTANCING
+             vec3 instPos = instanceMatrix[3].xyz;
+          #else
+             vec3 instPos = vec3(0.0);
+          #endif
 
           // Animate Falling
           float speed = uSpeed + aRandom * 15.0; // Varied speed
           float yOffset = uTime * speed;
 
-          // Calculate wrapped Y
-          // Assuming initial Y is 0 to uHeight?
-          // Actually we spawn them in a box.
-          // instPos.y is fixed. We subtract offset.
-          // We need modulo to keep them in [0, uHeight] or relative.
-
           float currentY = instPos.y - yOffset;
           // Wrap around uHeight.
-          // We want range [0, uHeight] roughly.
           float wrappedY = mod(currentY, uHeight);
-
-          // If instPos.y varies, this works if we treat uHeight as the "domain size".
-          // Let's assume uHeight is 30. wrappedY is 0..30.
-          // We want rain to cover the scene.
-          // We'll recenter it vertically if needed, but 0..30 is fine (ground to tree top).
-          // Maybe shift it down a bit?
-          // Let's just use it as is.
 
           vec3 center = vec3(instPos.x, wrappedY, instPos.z);
 
