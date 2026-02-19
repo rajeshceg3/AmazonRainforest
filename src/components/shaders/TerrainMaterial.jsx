@@ -70,7 +70,24 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
         }
       `
 
+      // Vertex Shader Injection
+      shader.vertexShader = `
+        varying vec3 vWorldPosition;
+      ` + shader.vertexShader
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `
+        #include <begin_vertex>
+        // Terrain is a single mesh, so modelMatrix is valid
+        vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
+        vWorldPosition = worldPos.xyz;
+        `
+      )
+
+      // Fragment Shader Injection
       shader.fragmentShader = `
+        varying vec3 vWorldPosition;
         uniform float uScale;
         uniform vec3 uColorSoil;
         uniform vec3 uColorMoss;
@@ -105,6 +122,8 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
         '#include <map_fragment>',
         `
         #include <map_fragment>
+
+        float wetness = 0.0;
 
         #ifdef USE_UV
             // Calculate slope
@@ -141,9 +160,27 @@ export function TerrainMaterial({ uScale = 0.1, uColorSoil = new THREE.Color('#3
 
             finalColor = mix(finalColor, rockColor, rockMix);
 
+            // --- Wetness Logic ---
+            // Darken near water level (approx -0.5)
+            // Start transition at 0.5, full wet at -0.5
+            wetness = smoothstep(0.5, -0.6, vWorldPosition.y);
+
+            // Darken wet soil
+            finalColor = mix(finalColor, finalColor * 0.4, wetness);
+
             diffuseColor.rgb = finalColor;
         #endif
         `
+      )
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <roughnessmap_fragment>',
+          `
+          #include <roughnessmap_fragment>
+          // Reduce roughness where wet (make glossier)
+          // Default roughness is passed as uniform usually or material property
+          roughnessFactor = mix(roughnessFactor, 0.2, wetness);
+          `
       )
     }
 

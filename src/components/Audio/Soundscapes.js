@@ -20,7 +20,7 @@ class WindLayer {
     const gustVol = (gust > 1.0) ? 5 : 0
     this.noise.volume.rampTo(baseVol + gustVol, 2.0)
     const pan = THREE.MathUtils.clamp(pos.x / 150, -0.4, 0.4)
-    this.panner.pan.rampTo(pan, 0.5)
+    this.panner.pan.linearRampTo(pan, 0.5)
   }
   dispose() {
     this.noise.dispose(); this.filter.dispose(); this.panner.dispose()
@@ -65,7 +65,7 @@ class RiverLayer {
     let pan = THREE.MathUtils.clamp((0 - pos.x) / 40, -0.8, 0.8)
     if (!Number.isFinite(pan)) pan = 0
 
-    this.panner.pan.rampTo(pan, 0.1)
+    this.panner.pan.linearRampTo(pan, 0.1)
 
     if (dist < 15 && time - this.lastBubbleTime > 0.2 + Math.random() * 0.5) {
       if (Math.random() > 0.7) {
@@ -135,7 +135,7 @@ class CanopyLayer {
     let pan = THREE.MathUtils.clamp(pos.x / 100, -0.3, 0.3)
     if (!Number.isFinite(pan)) pan = 0
 
-    this.panner.pan.rampTo(pan, 1)
+    this.panner.pan.linearRampTo(pan, 1)
   }
   dispose() { this.airNoise.dispose(); this.airFilter.dispose(); this.rustleNoise.dispose(); this.rustleFilter.dispose(); this.panner.dispose() }
 }
@@ -454,9 +454,9 @@ class HummingbirdLayer {
         // Move the source relative to player
         if (time - this.lastMove > 2.0) {
              const angle = Math.random() * Math.PI * 2
-             this.panner.positionX.rampTo(pos.x + Math.sin(angle) * 3, 2)
-             this.panner.positionY.rampTo(pos.y + 1 + Math.random(), 2)
-             this.panner.positionZ.rampTo(pos.z + Math.cos(angle) * 3, 2)
+             this.panner.positionX.linearRampTo(pos.x + Math.sin(angle) * 3, 2)
+             this.panner.positionY.linearRampTo(pos.y + 1 + Math.random(), 2)
+             this.panner.positionZ.linearRampTo(pos.z + Math.cos(angle) * 3, 2)
              this.lastMove = time
         }
     }
@@ -514,12 +514,20 @@ export class SoundscapeManager {
     if (!Number.isFinite(speed)) speed = 0;
 
     const time = Tone.now()
-    this.river.update(p, time); this.canopy.update(p, time); this.wood.update(p, time)
-    this.rain.update(p, time); this.insects.update(p, time); this.creatures.update(p, time)
-    this.frogs.update(p, time); this.howlers.update(p, time); this.ambience.update(p, time)
-    this.deepAmbience.update(p, time); this.wind.update(p, time); this.movement.update(p, time, speed)
-    this.footsteps.update(p, time); this.hummingbirds.update(p, time)
-    this.distantThunder.update(p, time)
+    try {
+        this.river.update(p, time); this.canopy.update(p, time); this.wood.update(p, time)
+        this.rain.update(p, time); this.insects.update(p, time); this.creatures.update(p, time)
+        this.frogs.update(p, time); this.howlers.update(p, time); this.ambience.update(p, time)
+        this.deepAmbience.update(p, time); this.wind.update(p, time); this.movement.update(p, time, speed)
+        this.footsteps.update(p, time); this.hummingbirds.update(p, time)
+        this.distantThunder.update(p, time)
+    } catch (e) {
+        // Prevent audio errors from crashing the visual loop
+        if (!this.hasLoggedError) {
+            console.warn("Audio update error (logged once):", e);
+            this.hasLoggedError = true;
+        }
+    }
   }
 
   triggerThunder(distance) {

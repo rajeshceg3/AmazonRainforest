@@ -150,7 +150,7 @@ const LeafClusterGeometry = () => {
     }, [])
 }
 
-// --- Palm Tree Geometry (New) ---
+// --- Palm Tree Geometry (Improved with Pinnate Fronds) ---
 const usePalmGeometry = () => {
     return useMemo(() => {
         // 1. Palm Trunk - Thinner, taller, ringed
@@ -178,8 +178,9 @@ const usePalmGeometry = () => {
         }
         trunkGeo.computeVertexNormals()
 
-        // 2. Palm Fronds - Large arching leaves
-        const frondGeo = new THREE.PlaneGeometry(0.8, 3.5, 4, 12)
+        // 2. Palm Fronds - Pinnate (Feather-like)
+        // High resolution for shaping
+        const frondGeo = new THREE.PlaneGeometry(0.8, 3.5, 32, 48)
         frondGeo.translate(0, 0.2, 0) // Pivot
 
         const fPos = frondGeo.attributes.position
@@ -188,11 +189,38 @@ const usePalmGeometry = () => {
             const yNorm = Math.max(0, (v.y + 0.5) / 4.0)
 
             // Taper width
-            v.x *= (1.0 - Math.pow(yNorm, 1.5)) * 0.5
+            // v.x *= (1.0 - Math.pow(yNorm, 1.5)) * 0.5
+            // But we do pinnate cuts first
+
+            const xAbs = Math.abs(v.x);
+
+            // Pinnate Cuts (Sawtooth)
+            // Frequency increases towards tip
+            const freq = 15.0 + yNorm * 10.0;
+            const cut = Math.pow(Math.sin(v.y * freq), 2.0); // 0 to 1
+
+            // Only affect edges, leave spine
+            if (xAbs > 0.05) {
+                // Pull vertices in based on cut
+                // cut=1 -> full width, cut=0 -> spine
+                // But we want sharp cuts.
+                // Modulate width by cut
+                const shape = (1.0 - Math.pow(yNorm, 1.5)) * 0.5; // Base shape width
+                const width = shape * (0.2 + 0.8 * cut); // Modulated width
+
+                // Adjust x to match width
+                if (xAbs > 0.0) v.x = Math.sign(v.x) * Math.min(xAbs, width);
+            } else {
+                 // Spine taper
+                 v.x *= (1.0 - Math.pow(yNorm, 1.5)) * 0.5;
+            }
 
             // Arch
             v.z += Math.sin(yNorm * Math.PI) * 1.5
             v.y -= Math.pow(yNorm, 2.0) * 2.0
+
+            // V-Shape cross section (gutter)
+            v.z -= Math.abs(v.x) * 0.5;
 
             fPos.setXYZ(i, v.x, v.y, v.z)
         }
