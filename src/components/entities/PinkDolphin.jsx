@@ -1,176 +1,175 @@
-import { useRef } from 'react'
+import React, { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { DolphinSkinMaterial } from '../shaders/DolphinSkinMaterial'
 import { pseudoNoise } from '../../utils/OrganicMath'
+import OrganicMesh from './OrganicMesh'
 
 const PinkDolphin = ({ position = [0, -2, 0] }) => {
   const group = useRef()
-  const headRef = useRef()
-  const torsoRef = useRef()
-  const tailBaseRef = useRef()
-  const tailFinRef = useRef()
+  const bodyRef = useRef()
 
   // Fins
   const finL = useRef()
   const finR = useRef()
+  const dorsalFin = useRef()
+  const flukes = useRef()
+
+  // Radius Function (Snout to Tail)
+  const bodyRadius = useMemo(() => (t) => {
+    // t=0 (Snout Tip) -> t=1 (Tail Tip)
+    // Snout
+    if (t < 0.1) return THREE.MathUtils.lerp(0.04, 0.15, t / 0.1)
+    // Head/Melon
+    if (t < 0.25) return THREE.MathUtils.lerp(0.15, 0.3, (t - 0.1) / 0.15)
+    // Body (Thick)
+    if (t < 0.5) return THREE.MathUtils.lerp(0.3, 0.38, (t - 0.25) / 0.25)
+    // Taper
+    if (t < 0.8) return THREE.MathUtils.lerp(0.38, 0.15, (t - 0.5) / 0.3)
+    // Tail Stock
+    return THREE.MathUtils.lerp(0.15, 0.05, (t - 0.8) / 0.2)
+  }, [])
+
+  const skinMaterial = useMemo(() => (
+      <DolphinSkinMaterial
+        uColorBase={new THREE.Color("#eecbcb")}
+        uColorPatch={new THREE.Color("#998888")}
+        uScale={3.0}
+      />
+  ), [])
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
 
-    // Organic Speed Modulation
-    // Bursts of speed vs lazy swimming
+    // Swimming Movement
     const speedNoise = pseudoNoise(t * 0.4, 123)
     const swimSpeed = 2.0 + speedNoise * 1.5
     const moveSpeed = 0.2 + speedNoise * 0.1
 
-    // Circle path with noise deviations
+    // Path Logic (Circle)
     if (group.current) {
         const r = 12 + pseudoNoise(t * 0.15, 0) * 4.0
         const angle = t * moveSpeed + pseudoNoise(t * 0.1, 50) * 0.5
-
         const x = position[0] + Math.sin(angle) * r
         const z = position[2] + Math.cos(angle) * r
-        const y = position[1] + Math.sin(t * 0.8) * 0.3 + pseudoNoise(t * 0.5, 99) * 0.5 // Depth variance
+        const y = position[1] + Math.sin(t * 0.8) * 0.3 + pseudoNoise(t * 0.5, 99) * 0.5
 
-        // Calculate target facing
         const currentPos = group.current.position
         const targetPos = new THREE.Vector3(x, y, z)
         const dir = targetPos.clone().sub(currentPos).normalize()
 
         group.current.position.copy(targetPos)
 
-        // Custom LookAt logic for smooth turning
-        // We can just use LookAt relative to velocity if we track it,
-        // but for now standard circle tangent + noise is okay.
-        // Actually, let's use the velocity vector we just calculated implicitly
+        // Look At
         const lookTarget = currentPos.clone().add(dir)
         group.current.lookAt(lookTarget)
 
-        // Add Roll/Banking based on turn sharpness (noise)
+        // Banking
         const roll = pseudoNoise(t * 0.5, 20) * 0.8
         group.current.rotation.z += roll
     }
 
-    // Undulation (Spine) - Modulated by speed
-    if (torsoRef.current) torsoRef.current.rotation.x = Math.sin(t * swimSpeed) * 0.1
-    if (headRef.current) headRef.current.rotation.x = Math.sin(t * swimSpeed + 0.5) * 0.05
-    if (tailBaseRef.current) tailBaseRef.current.rotation.x = Math.sin(t * swimSpeed - 0.5) * 0.2
-    if (tailFinRef.current) tailFinRef.current.rotation.x = Math.sin(t * swimSpeed - 1.0) * 0.4
+    // Undulation (Body Bones)
+    if (bodyRef.current && bodyRef.current.bones) {
+        const bones = bodyRef.current.bones
+        // Bones: 0=Snout, ..., N=Tail
+        // Rotate around X (Up/Down) for swimming
+        // Wave propagation
 
-    // Fins flapping slightly
+        // Head (Bone 0, 1) relatively stable
+        bones[0].rotation.x = Math.sin(t * swimSpeed) * 0.05
+
+        for (let i=2; i<bones.length; i++) {
+            // Increasing amplitude towards tail
+            const amp = 0.05 + (i / bones.length) * 0.15
+            // Phase shift
+            const phase = i * 0.5
+            bones[i].rotation.x = Math.sin(t * swimSpeed - phase) * amp
+        }
+    }
+
+    // Fins Flap
     if (finL.current) finL.current.rotation.z = 0.5 + Math.sin(t * swimSpeed) * 0.1
     if (finR.current) finR.current.rotation.z = -0.5 - Math.sin(t * swimSpeed) * 0.1
   })
 
-  const skinMaterial = (
-      <DolphinSkinMaterial
-        uColorBase={new THREE.Color("#eecbcb")}
-        uColorPatch={new THREE.Color("#998888")}
-        uScale={3.0}
-      />
-  )
+  // Attachments
+  useEffect(() => {
+     if (bodyRef.current && bodyRef.current.bones) {
+         // Attach Pectoral Fins to Bone 2 (Shoulder area)
+         if (finL.current) bodyRef.current.bones[2].add(finL.current)
+         if (finR.current) bodyRef.current.bones[2].add(finR.current)
+
+         // Attach Dorsal Fin to Bone 4 (Mid Back)
+         if (dorsalFin.current) bodyRef.current.bones[4].add(dorsalFin.current)
+
+         // Attach Flukes to Last Bone
+         const lastBone = bodyRef.current.bones[bodyRef.current.bones.length - 1]
+         if (flukes.current) lastBone.add(flukes.current)
+     }
+  }, [])
 
   return (
     <group ref={group} position={position}>
-        {/* Torso Group */}
-        <group ref={torsoRef}>
-             {/* Main Body - Capsule for organic shape */}
-             <mesh rotation={[Math.PI/2, 0, 0]} castShadow>
-                 {/* Radius 0.38, Length 1.5 */}
-                 <capsuleGeometry args={[0.38, 1.5, 8, 16]} />
+        {/* BODY (Snout to Tail) - Points Back (+Z) or Forward (-Z)? */}
+        {/* OrganicMesh is +Y (0 to L). */}
+        {/* Dolphin swims forward. If we align +Y to -Z (Forward), Snout is at -Z. */}
+        {/* But usually Head is at origin or front. */}
+        {/* Let's align +Y to +Z (Backwards). So Snout at 0, Tail at +L. */}
+        {/* Rotate X -90. Y -> +Z. */}
+        <OrganicMesh
+            ref={bodyRef}
+            length={2.2}
+            segments={8}
+            radiusFunction={bodyRadius}
+            rotation={[-Math.PI/2, 0, 0]}
+            castShadow receiveShadow
+        >
+            {skinMaterial}
+        </OrganicMesh>
+
+        {/* Fins (Simple geometry for now, parented to bones) */}
+
+        {/* Pectoral Left */}
+        <group ref={finL} position={[0.35, 0, 0]} rotation={[0, 0.5, 0.5]}>
+             <mesh scale={[1.0, 0.15, 0.5]} position={[0.4, 0, 0]} castShadow receiveShadow>
+                 <sphereGeometry args={[0.4, 32, 32]} />
                  {skinMaterial}
              </mesh>
-
-             {/* Dorsal Ridge (Hump) - Blended better */}
-             <mesh position={[0, 0.3, -0.2]} rotation={[0.2, 0, 0]} scale={[0.4, 0.4, 1.5]}>
-                 <sphereGeometry args={[0.5, 16, 16]} />
-                 {skinMaterial}
-             </mesh>
-
-             {/* Tail Section */}
-             <group position={[0, 0.1, -0.9]} ref={tailBaseRef}>
-                  {/* Tail Stock - Tapered using Cone or scaled Capsule */}
-                  <mesh rotation={[Math.PI/2, 0, 0]} position={[0, 0, -0.6]} castShadow>
-                      <coneGeometry args={[0.25, 1.4, 32]} />
-                      {skinMaterial}
-                  </mesh>
-                  {/* Smoothing the joint with a sphere */}
-                  <mesh position={[0, 0, -0.1]}>
-                      <sphereGeometry args={[0.3, 16, 16]} />
-                      {skinMaterial}
-                  </mesh>
-
-                  {/* Flukes (Tail Fin) */}
-                  <group position={[0, 0, -1.3]} ref={tailFinRef} rotation={[-0.2, 0, 0]}>
-                      {/* Better Flukes: Two flattened spheres with curve */}
-                      <group position={[0, 0, 0]}>
-                           <mesh position={[0.4, 0, 0]} rotation={[0.2, 0, -0.3]} scale={[1.2, 0.1, 0.7]}>
-                               <sphereGeometry args={[0.35, 32, 32]} />
-                               {skinMaterial}
-                           </mesh>
-                           <mesh position={[-0.4, 0, 0]} rotation={[0.2, 0, 0.3]} scale={[1.2, 0.1, 0.7]}>
-                               <sphereGeometry args={[0.35, 32, 32]} />
-                               {skinMaterial}
-                           </mesh>
-                           {/* Center blend */}
-                           <mesh position={[0, 0, 0]} scale={[0.5, 0.1, 0.5]}>
-                               <sphereGeometry args={[0.3, 16, 16]} />
-                               {skinMaterial}
-                           </mesh>
-                      </group>
-                  </group>
-             </group>
-
-             {/* Pectoral Fins attached to Torso */}
-             <group position={[0.35, -0.15, 0.4]} rotation={[0, 0.5, 0.5]} ref={finL}>
-                 <mesh scale={[1.0, 0.15, 0.5]} position={[0.4, 0, 0]}>
-                     <sphereGeometry args={[0.4, 32, 32]} />
-                     {skinMaterial}
-                 </mesh>
-             </group>
-             <group position={[-0.35, -0.15, 0.4]} rotation={[0, -0.5, -0.5]} ref={finR}>
-                 <mesh scale={[1.0, 0.15, 0.5]} position={[-0.4, 0, 0]}>
-                     <sphereGeometry args={[0.4, 32, 32]} />
-                     {skinMaterial}
-                 </mesh>
-             </group>
         </group>
 
-        {/* Head Group */}
-        <group position={[0, -0.05, 0.8]} ref={headRef}>
-             {/* Cranium - Smooth blend */}
-             <mesh castShadow position={[0, 0, -0.1]}>
-                 <sphereGeometry args={[0.36, 32, 32]} />
+        {/* Pectoral Right */}
+        <group ref={finR} position={[-0.35, 0, 0]} rotation={[0, -0.5, -0.5]}>
+             <mesh scale={[1.0, 0.15, 0.5]} position={[-0.4, 0, 0]} castShadow receiveShadow>
+                 <sphereGeometry args={[0.4, 32, 32]} />
                  {skinMaterial}
              </mesh>
-             {/* Melon (Bulbous forehead) */}
-             <mesh position={[0, 0.18, 0.15]} castShadow scale={[0.9, 1, 1.1]}>
+        </group>
+
+        {/* Dorsal Fin */}
+        <group ref={dorsalFin} position={[0, 0.3, 0]} rotation={[0.2, 0, 0]}>
+             <mesh scale={[0.1, 0.6, 0.8]} position={[0, 0.3, 0]} castShadow receiveShadow>
                  <sphereGeometry args={[0.3, 32, 32]} />
                  {skinMaterial}
              </mesh>
-             {/* Snout (Long beak) - Tapered Capsule/Cylinder blend */}
-             <mesh position={[0, -0.05, 0.6]} rotation={[Math.PI/2, 0, 0]} castShadow>
-                 {/* Using Cone for taper */}
-                 <coneGeometry args={[0.06, 0.8, 32]} />
-                 {skinMaterial}
-             </mesh>
-             {/* Snout tip rounded */}
-             <mesh position={[0, -0.05, 1.0]}>
-                 <sphereGeometry args={[0.03, 16, 16]} />
-                 {skinMaterial}
-             </mesh>
-
-             {/* Eyes */}
-             <mesh position={[0.22, -0.05, 0.15]}>
-                 <sphereGeometry args={[0.025, 16, 16]} />
-                 <meshStandardMaterial color="#111" roughness={0.0} />
-             </mesh>
-              <mesh position={[-0.22, -0.05, 0.15]}>
-                 <sphereGeometry args={[0.025, 16, 16]} />
-                 <meshStandardMaterial color="#111" roughness={0.0} />
-             </mesh>
         </group>
+
+        {/* Flukes (Tail Fin) */}
+        {/* Attached to Last Bone. Last Bone is at tip. */}
+        {/* Flukes should be horizontal. */}
+        <group ref={flukes} position={[0, 0, 0]} rotation={[0, 0, 0]}>
+             <group rotation={[Math.PI/2, 0, 0]}> {/* Flat horizontally */}
+                  <mesh position={[0.4, 0, 0]} rotation={[0, 0, -0.3]} scale={[1.2, 0.1, 0.6]} castShadow receiveShadow>
+                       <sphereGeometry args={[0.35, 32, 32]} />
+                       {skinMaterial}
+                  </mesh>
+                  <mesh position={[-0.4, 0, 0]} rotation={[0, 0, 0.3]} scale={[1.2, 0.1, 0.6]} castShadow receiveShadow>
+                       <sphereGeometry args={[0.35, 32, 32]} />
+                       {skinMaterial}
+                  </mesh>
+             </group>
+        </group>
+
     </group>
   )
 }

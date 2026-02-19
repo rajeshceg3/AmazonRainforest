@@ -1,246 +1,276 @@
-import { useRef, useMemo } from 'react'
+import React, { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { JaguarFurMaterial } from '../shaders/JaguarFurMaterial'
-import { pseudoNoise, remap, mix } from '../../utils/OrganicMath'
+import { pseudoNoise, mix } from '../../utils/OrganicMath'
+import OrganicMesh from './OrganicMesh'
 
 const Jaguar = ({ position = [0, 0, 0] }) => {
   const group = useRef()
-  // Body segments
-  const headRef = useRef()
-  const neckRef = useRef()
-  const chestRef = useRef()
-  const bellyRef = useRef()
-  const hipsRef = useRef()
+  const bodyRef = useRef()
   const tailRef = useRef()
 
-  // Legs
+  // Legs Refs
   const legFL = useRef()
   const legFR = useRef()
   const legBL = useRef()
   const legBR = useRef()
 
-  // State for idle behavior
+  // State
   const behaviorState = useRef({
     isIdle: false,
-    nextTransition: 5.0, // Time until next state change
+    nextTransition: 5.0,
     headTargetX: 0,
     headTargetY: 0,
-    seed: Math.random() * 100
+    seed: Math.random() * 100,
+    animTime: 0
   })
 
-  // Reusable geometry
-  const muscleGeo = useMemo(() => new THREE.SphereGeometry(1, 16, 16), [])
+  // Radius Functions
+  const bodyRadius = useMemo(() => (t) => {
+    // t=0 (Hips) -> t=1 (Head)
+    if (t < 0.2) return THREE.MathUtils.lerp(0.28, 0.25, t / 0.2) // Hips to Waist
+    if (t < 0.5) return THREE.MathUtils.lerp(0.25, 0.35, (t - 0.2) / 0.3) // Waist to Chest
+    if (t < 0.7) return THREE.MathUtils.lerp(0.35, 0.25, (t - 0.5) / 0.2) // Chest to Neck Base
+    if (t < 0.85) return THREE.MathUtils.lerp(0.25, 0.18, (t - 0.7) / 0.15) // Neck
+    return THREE.MathUtils.lerp(0.18, 0.22, (t - 0.85) / 0.15) // Head
+  }, [])
+
+  const tailRadius = useMemo(() => (t) => {
+    // t=0 (Base) -> t=1 (Tip)
+    return THREE.MathUtils.lerp(0.1, 0.03, t)
+  }, [])
+
+  // Legs Geometry (Simple Cylinders/Capsules for now, attached to bones later?)
+  // For "Ultrathink", let's use OrganicMesh for legs too?
+  // Maybe overkill for now, let's stick to Body+Tail smoothing first.
+  // We can attach simple meshes for legs to the body bones.
+
+  // Material
+  const furMaterial = useMemo(() => (
+    <JaguarFurMaterial
+      uScale={6.0}
+      uColor={new THREE.Color("#d49b5c")}
+      uSpotColor={new THREE.Color("#2b1d0e")}
+    />
+  ), [])
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime()
-    const dt = state.clock.getDelta()
     const { seed } = behaviorState.current
 
-    // --- State Machine: Idle vs Walking ---
+    // Logic updates
     if (t > behaviorState.current.nextTransition) {
       behaviorState.current.isIdle = !behaviorState.current.isIdle
-      // Randomize next duration: Idle for 2-5s, Walk for 5-10s
-      const duration = behaviorState.current.isIdle
-        ? 2 + Math.random() * 3
-        : 5 + Math.random() * 5
+      const duration = behaviorState.current.isIdle ? 2 + Math.random() * 3 : 5 + Math.random() * 5
       behaviorState.current.nextTransition = t + duration
-
       if (behaviorState.current.isIdle) {
-        // Pick a random spot to look at
-        behaviorState.current.headTargetY = (Math.random() - 0.5) * 1.0 // Left/Right
-        behaviorState.current.headTargetX = (Math.random() - 0.5) * 0.5 // Up/Down
+         behaviorState.current.headTargetY = (Math.random() - 0.5) * 1.0
+         behaviorState.current.headTargetX = (Math.random() - 0.5) * 0.5
       }
     }
 
-    // Smoothly blend speed (0 for idle, 2.0 for walk)
-    // We use a separate lerp value, but for simplicity here we just use isIdle logic
-    // A more robust way would be a 'currentSpeed' ref.
-    // Let's assume sudden stop is okay for now, or just damping.
-    const targetSpeed = behaviorState.current.isIdle ? 0.0 : 2.0
-    // Simple damping for speed would require a persistent speed var.
-    // Let's stick to the request: Organic Noise replacing Sinewaves.
-
-    // Using a persistent 'animTime' allows us to stop the cycle when idle
-    if (!behaviorState.current.animTime) behaviorState.current.animTime = 0
     if (!behaviorState.current.isIdle) {
-        behaviorState.current.animTime += 0.016 * 2.0 // advance animation
+        behaviorState.current.animTime += 0.016 * 2.0
     }
     const aT = behaviorState.current.animTime
 
-    // --- Organic Movement Logic ---
+    // ANIMATION
 
-    // Spine Undulation: Layered noise for less robotic feel
-    const spineNoise = pseudoNoise(aT, seed) * 0.1
-    if (chestRef.current) chestRef.current.rotation.y = spineNoise * 0.5
-    if (bellyRef.current) bellyRef.current.rotation.y = pseudoNoise(aT - 0.5, seed) * 0.05
-    if (hipsRef.current) hipsRef.current.rotation.y = pseudoNoise(aT - 1.0, seed) * 0.05
+    // BODY (Spine)
+    if (bodyRef.current && bodyRef.current.bones) {
+        const bones = bodyRef.current.bones
+        // Bones: 0=Hips, 1=Waist, 2=Mid, 3=Chest, 4=Neck, 5=Head
 
-    // Neck counter-rotation + noise
-    if (neckRef.current) neckRef.current.rotation.y = -spineNoise * 0.8 + pseudoNoise(t * 0.5, seed + 10) * 0.05
+        const spineNoise = pseudoNoise(aT, seed) * 0.1
 
-    // Head: Micro-twitches + Look Target
-    let headY = -spineNoise * 0.5 // Counter-balance body
-    let headX = 0
+        // Hips (Root) - Bobbing
+        const bob = Math.abs(Math.sin(aT)) * 0.05
+        bones[0].position.y = (behaviorState.current.isIdle ? 0 : bob) // Local Y is along the spine? No.
+        // Wait, bones[0].position is relative to Mesh.
+        // Mesh is rotated.
+        // If I move bones[0] in Y, it moves along the mesh Y axis (which is -Z world).
+        // I want Vertical bobbing (World Y).
+        // Since Mesh is rotated X 90, Mesh Z is World -Y?
+        // Local Z is World Y.
+        bones[0].position.z = (behaviorState.current.isIdle ? 0 : -bob) // Move down?
+        // Actually simpler: Move the whole group for bobbing.
 
-    // Idle looking around
-    if (behaviorState.current.isIdle) {
-       headY = mix(headY, behaviorState.current.headTargetY, 0.1) // Lerp to target
-       headX = mix(headX, behaviorState.current.headTargetX, 0.1)
+        // Spine Rotation (Y axis in local space = Left/Right sway)
+        // Since Cylinder is along Y, rotation around Y is Twist.
+        // Rotation around X is Pitch (Up/Down).
+        // Rotation around Z is Yaw (Side/Side).
+
+        // Waist
+        bones[1].rotation.z = spineNoise * 0.5
+        // Mid
+        bones[2].rotation.z = pseudoNoise(aT - 0.5, seed) * 0.1
+        // Chest
+        bones[3].rotation.z = pseudoNoise(aT - 1.0, seed) * 0.1
+
+        // Neck (Counter rotate)
+        bones[4].rotation.z = -spineNoise * 0.8
+
+        // Head Look
+        let headY = -spineNoise * 0.5
+        let headX = 0
+        if (behaviorState.current.isIdle) {
+           headY = mix(headY, behaviorState.current.headTargetY, 0.1)
+           headX = mix(headX, behaviorState.current.headTargetX, 0.1)
+        }
+        // Apply to Head Bone (Rotation Z is side-to-side, Rotation X is Up/Down)
+        // Note: Bones local coords. Y is along bone. X/Z are perpendicular.
+        bones[5].rotation.z = THREE.MathUtils.lerp(bones[5].rotation.z, headY, 0.1)
+        bones[5].rotation.x = -0.4 + headX // Look down slightly
     }
 
-    // Micro-twitches (High frequency noise)
-    const twitch = pseudoNoise(t * 15.0, seed + 50)
-    // Only twitch occasionally (threshold)
-    if (twitch > 0.6) {
-        headY += (twitch - 0.6) * 0.1
-        headX += (twitch - 0.6) * 0.05
-    }
-
-    if (headRef.current) {
-        headRef.current.rotation.y = THREE.MathUtils.lerp(headRef.current.rotation.y, headY, 0.1)
-        // Add breathing to head pitch
-        headRef.current.rotation.x = -0.4 + headX + Math.sin(t * 2.0) * 0.01
-    }
-
-    // Tail Sway: Very organic, independent noise
-    if (tailRef.current) {
-        // Base sway + whip
+    // TAIL
+    if (tailRef.current && tailRef.current.bones) {
+        const bones = tailRef.current.bones
+        // Wave
         const tailSway = pseudoNoise(t * 0.8, seed + 20) * 0.3
-        const tailWhip = pseudoNoise(t * 3.0, seed + 25) * 0.1 // Occasional flick
-        tailRef.current.rotation.y = tailSway + tailWhip
-        tailRef.current.rotation.z = Math.cos(t * 0.5) * 0.1
+        const tailWhip = pseudoNoise(t * 3.0, seed + 25) * 0.1
+
+        // Rotate base
+        bones[0].rotation.z = tailSway
+        // Propagate wave
+        for (let i=1; i<bones.length; i++) {
+             bones[i].rotation.z = Math.sin(t * 5.0 - i * 0.5) * 0.1 + tailWhip * 0.5
+        }
     }
 
-    // Walking Cycle (Legs)
-    // We keep sin/cos for the gait cycle as it's rhythmic, but modulated by 'isIdle'
-    const legAmp = behaviorState.current.isIdle ? 0 : 0.4
-    // Lerp leg amplitude for smooth stop
-    // We can just apply the rotation directly.
-
+    // LEGS
+    const legAmp = behaviorState.current.isIdle ? 0 : 0.6
     if (legFL.current) legFL.current.rotation.x = Math.sin(aT) * legAmp
     if (legBR.current) legBR.current.rotation.x = Math.sin(aT) * legAmp
     if (legFR.current) legFR.current.rotation.x = Math.sin(aT + Math.PI) * legAmp
     if (legBL.current) legBL.current.rotation.x = Math.sin(aT + Math.PI) * legAmp
 
-    // Breathing: Always happens, distinct from walking
-    // Complex breath: Inhale pause Exhale pause
-    const breath = (Math.sin(t * 1.5) + Math.sin(t * 1.5 + Math.PI*0.2) * 0.5) * 0.02
-    if (chestRef.current) chestRef.current.scale.y = 1 + breath
-
-    // Bobbing
+    // Bobbing Group
     if (group.current) {
         const bob = Math.abs(Math.sin(aT)) * 0.05
-        // Smoothly transition bob height
-        group.current.position.y = position[1] + (behaviorState.current.isIdle ? 0 : bob)
+        group.current.position.y = position[1] + (behaviorState.current.isIdle ? 0 : bob) + 0.6 // Height offset
     }
   })
 
-  const furMaterial = (
-      <JaguarFurMaterial
-        uScale={6.0}
-        uColor={new THREE.Color("#d49b5c")}
-        uSpotColor={new THREE.Color("#2b1d0e")}
-      />
-  )
+  // Attachments
+  // Use `useEffect` to attach Tail and Legs to Body Bones
+  useEffect(() => {
+     if (bodyRef.current && bodyRef.current.bones && tailRef.current) {
+         // Attach Tail to Hips (Bone 0)
+         // Note: OrganicMesh exposes `mesh` as well.
+         // We can parent the Tail Mesh to the Hip Bone.
+         bodyRef.current.bones[0].add(tailRef.current.mesh)
+     }
+
+     if (bodyRef.current && bodyRef.current.bones) {
+         // Attach Legs
+         // Front Legs -> Chest (Bone 3)
+         if (legFL.current) bodyRef.current.bones[3].add(legFL.current)
+         if (legFR.current) bodyRef.current.bones[3].add(legFR.current)
+
+         // Back Legs -> Hips (Bone 0)
+         if (legBL.current) bodyRef.current.bones[0].add(legBL.current)
+         if (legBR.current) bodyRef.current.bones[0].add(legBR.current)
+     }
+  }, [])
 
   return (
     <group ref={group} position={position}>
-      <group position={[0, 0.7, 0]}> {/* Height offset */}
+        {/* BODY (Hips to Head) - Points Forward (-Z) */}
+        <OrganicMesh
+            ref={bodyRef}
+            length={1.5}
+            segments={6}
+            radiusFunction={bodyRadius}
+            rotation={[Math.PI/2, 0, 0]} // Y becomes -Z
+            castShadow receiveShadow
+        >
+            {furMaterial}
+        </OrganicMesh>
 
-          {/* BELLY (Center) - Ellipsoid */}
-          <group ref={bellyRef}>
-            <mesh geometry={muscleGeo} scale={[0.25, 0.3, 0.35]} castShadow receiveShadow>
+        {/* TAIL (Base to Tip) - Points Back (+Z) */}
+        {/* Initially at 0,0,0. Will be attached to Hip Bone. */}
+        {/* Hip Bone is at 0,0,0 local to Body. */}
+        {/* We want Tail to point +Z (Backwards relative to body? No, body points -Z. Back is +Z) */}
+        <OrganicMesh
+            ref={tailRef}
+            length={1.2}
+            segments={8}
+            radiusFunction={tailRadius}
+            rotation={[-Math.PI, 0, 0]} // Y becomes -Y (Down)? No.
+            // Body is Rot X 90. Y -> -Z.
+            // Tail should be opposite. Y -> +Z.
+            // Rot X -90.
+            // Wait, if attached to Hip Bone (which is rotated with body),
+            // The local space of Hip Bone aligns with Body Mesh?
+            // Yes.
+            // So +Y in Bone space is -Z world.
+            // We want Tail to go +Z world.
+            // So we need Tail to point -Y in Bone Space.
+            // OrganicMesh goes +Y.
+            // So rotate Tail Mesh by PI around X? (Flip Y).
+            // Yes.
+            rotation={[Math.PI, 0, 0]}
+            castShadow receiveShadow
+        >
+            {furMaterial}
+        </OrganicMesh>
+
+        {/* LEGS (Simple Placeholders for now, but smoothed) */}
+        {/* We use simple meshes but parented to bones so they move naturally */}
+        {/* Front Left */}
+        <group ref={legFL} position={[0.2, 0, 0]}>
+             {/* Offset from Chest Bone center */}
+             {/* Note: In Bone Space (Y is Forward). X is Right. Z is Up? */}
+             {/* Rot X 90. Y->-Z (Forward). Z->Y (Up). X->X (Right). */}
+             {/* So pos [0.2, 0, 0] is Right 0.2. Correct. */}
+
+             {/* Leg Geometry - Cylinder pointing Down (World -Y, Bone -Z) */}
+             <mesh position={[0, 0, -0.3]} rotation={[Math.PI/2, 0, 0]} castShadow receiveShadow>
+                 <cylinderGeometry args={[0.08, 0.06, 0.6, 12]} />
                  {furMaterial}
-            </mesh>
+             </mesh>
+             {/* Paw */}
+             <mesh position={[0, 0, -0.65]} castShadow receiveShadow>
+                 <sphereGeometry args={[0.07, 12, 12]} />
+                 {furMaterial}
+             </mesh>
+        </group>
 
-            {/* CHEST (Forward) */}
-            <group position={[0, 0.05, 0.5]} ref={chestRef}>
-                 <mesh geometry={muscleGeo} scale={[0.28, 0.32, 0.35]} castShadow receiveShadow>
-                    {furMaterial}
-                 </mesh>
+         <group ref={legFR} position={[-0.2, 0, 0]}>
+             <mesh position={[0, 0, -0.3]} rotation={[Math.PI/2, 0, 0]} castShadow receiveShadow>
+                 <cylinderGeometry args={[0.08, 0.06, 0.6, 12]} />
+                 {furMaterial}
+             </mesh>
+             <mesh position={[0, 0, -0.65]} castShadow receiveShadow>
+                 <sphereGeometry args={[0.07, 12, 12]} />
+                 {furMaterial}
+             </mesh>
+        </group>
 
-                 {/* NECK */}
-                 <group position={[0, 0.15, 0.3]} ref={neckRef} rotation={[0.4, 0, 0]}>
-                    <mesh geometry={muscleGeo} scale={[0.15, 0.15, 0.25]} castShadow receiveShadow>
-                        {furMaterial}
-                    </mesh>
+         <group ref={legBL} position={[0.2, 0, 0]}>
+             <mesh position={[0, 0, -0.3]} rotation={[Math.PI/2, 0, 0]} castShadow receiveShadow>
+                 <cylinderGeometry args={[0.1, 0.07, 0.6, 12]} />
+                 {furMaterial}
+             </mesh>
+             <mesh position={[0, 0, -0.65]} castShadow receiveShadow>
+                 <sphereGeometry args={[0.07, 12, 12]} />
+                 {furMaterial}
+             </mesh>
+        </group>
 
-                    {/* HEAD */}
-                    <group position={[0, 0.0, 0.25]} ref={headRef} rotation={[-0.4, 0, 0]}>
-                        <mesh geometry={muscleGeo} scale={[0.18, 0.18, 0.2]} castShadow receiveShadow>
-                            {furMaterial}
-                        </mesh>
-                        {/* Snout - Rounded */}
-                        <mesh geometry={muscleGeo} scale={[0.06, 0.05, 0.08]} position={[0, -0.05, 0.18]} castShadow receiveShadow>
-                            <meshStandardMaterial color="#e0ac69" roughness={0.6} />
-                        </mesh>
-                        {/* Ears - small spheres */}
-                        <mesh geometry={muscleGeo} scale={[0.05, 0.05, 0.02]} position={[0.1, 0.15, 0.0]} rotation={[0, 0, -0.5]} castShadow receiveShadow>
-                             <meshStandardMaterial color="#d49b5c" />
-                        </mesh>
-                        <mesh geometry={muscleGeo} scale={[0.05, 0.05, 0.02]} position={[-0.1, 0.15, 0.0]} rotation={[0, 0, 0.5]} castShadow receiveShadow>
-                             <meshStandardMaterial color="#d49b5c" />
-                        </mesh>
-                    </group>
-                 </group>
+         <group ref={legBR} position={[-0.2, 0, 0]}>
+             <mesh position={[0, 0, -0.3]} rotation={[Math.PI/2, 0, 0]} castShadow receiveShadow>
+                 <cylinderGeometry args={[0.1, 0.07, 0.6, 12]} />
+                 {furMaterial}
+             </mesh>
+             <mesh position={[0, 0, -0.65]} castShadow receiveShadow>
+                 <sphereGeometry args={[0.07, 12, 12]} />
+                 {furMaterial}
+             </mesh>
+        </group>
 
-                 {/* Front Legs - Upper Arm */}
-                 <group position={[0.2, -0.1, 0.15]} ref={legFL}>
-                    <mesh geometry={muscleGeo} scale={[0.08, 0.25, 0.1]} position={[0, -0.15, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                    {/* Lower Arm */}
-                     <mesh geometry={muscleGeo} scale={[0.06, 0.2, 0.08]} position={[0, -0.45, 0.05]} rotation={[-0.2, 0, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                 </group>
-                 <group position={[-0.2, -0.1, 0.15]} ref={legFR}>
-                    <mesh geometry={muscleGeo} scale={[0.08, 0.25, 0.1]} position={[0, -0.15, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                     <mesh geometry={muscleGeo} scale={[0.06, 0.2, 0.08]} position={[0, -0.45, 0.05]} rotation={[-0.2, 0, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                 </group>
-            </group>
-
-            {/* HIPS (Back) */}
-            <group position={[0, 0.02, -0.5]} ref={hipsRef}>
-                 <mesh geometry={muscleGeo} scale={[0.26, 0.31, 0.35]} castShadow receiveShadow>
-                    {furMaterial}
-                 </mesh>
-
-                 {/* TAIL */}
-                 <group position={[0, 0.1, -0.3]} ref={tailRef} rotation={[-0.4, 0, 0]}>
-                     {/* Tail segments using simple cylinder or stretched sphere */}
-                    <mesh geometry={muscleGeo} scale={[0.04, 0.04, 0.6]} position={[0, 0, -0.5]} castShadow receiveShadow>
-                        {furMaterial}
-                    </mesh>
-                 </group>
-
-                 {/* Back Legs */}
-                 <group position={[0.2, -0.1, -0.1]} ref={legBL}>
-                    <mesh geometry={muscleGeo} scale={[0.1, 0.3, 0.15]} position={[0, -0.15, 0]} rotation={[0.2, 0, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                    {/* Lower Leg */}
-                     <mesh geometry={muscleGeo} scale={[0.07, 0.25, 0.08]} position={[0, -0.5, -0.05]} rotation={[-0.4, 0, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                 </group>
-                 <group position={[-0.2, -0.1, -0.1]} ref={legBR}>
-                    <mesh geometry={muscleGeo} scale={[0.1, 0.3, 0.15]} position={[0, -0.15, 0]} rotation={[0.2, 0, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                     <mesh geometry={muscleGeo} scale={[0.07, 0.25, 0.08]} position={[0, -0.5, -0.05]} rotation={[-0.4, 0, 0]} castShadow receiveShadow>
-                         {furMaterial}
-                    </mesh>
-                 </group>
-            </group>
-          </group>
-
-      </group>
     </group>
   )
 }
