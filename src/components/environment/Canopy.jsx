@@ -150,13 +150,136 @@ const LeafClusterGeometry = () => {
     }, [])
 }
 
+// --- Palm Tree Geometry (New) ---
+const usePalmGeometry = () => {
+    return useMemo(() => {
+        // 1. Palm Trunk - Thinner, taller, ringed
+        const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 1, 12, 32)
+        trunkGeo.translate(0, 0.5, 0)
+
+        const pos = trunkGeo.attributes.position
+        const v = new THREE.Vector3()
+
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i)
+
+            // Rings texture via displacement
+            const ring = Math.sin(v.y * 60.0) * 0.01
+            const r = Math.sqrt(v.x*v.x + v.z*v.z)
+            if (r > 0.001) {
+                v.x += (v.x/r) * ring
+                v.z += (v.z/r) * ring
+            }
+
+            // Slight curve
+            v.x += Math.sin(v.y * 2.0) * 0.1 * v.y
+
+            pos.setXYZ(i, v.x, v.y, v.z)
+        }
+        trunkGeo.computeVertexNormals()
+
+        // 2. Palm Fronds - Large arching leaves
+        const frondGeo = new THREE.PlaneGeometry(0.8, 3.5, 4, 12)
+        frondGeo.translate(0, 0.2, 0) // Pivot
+
+        const fPos = frondGeo.attributes.position
+        for (let i = 0; i < fPos.count; i++) {
+            v.fromBufferAttribute(fPos, i)
+            const yNorm = Math.max(0, (v.y + 0.5) / 4.0)
+
+            // Taper width
+            v.x *= (1.0 - Math.pow(yNorm, 1.5)) * 0.5
+
+            // Arch
+            v.z += Math.sin(yNorm * Math.PI) * 1.5
+            v.y -= Math.pow(yNorm, 2.0) * 2.0
+
+            fPos.setXYZ(i, v.x, v.y, v.z)
+        }
+        frondGeo.computeVertexNormals()
+
+        // Assemble crown
+        const crown = new THREE.BufferGeometry()
+        const frondCount = 9
+        const geometries = [trunkGeo] // Start with trunk
+        const dummy = new THREE.Object3D()
+
+        for(let i=0; i<frondCount; i++) {
+            const f = frondGeo.clone()
+            const angle = (i / frondCount) * Math.PI * 2
+
+            dummy.position.set(0, 0.95, 0) // Top of trunk
+            dummy.rotation.set(0, angle, 0)
+            dummy.rotateX(0.2) // Tilt out
+            dummy.updateMatrix()
+
+            f.applyMatrix4(dummy.matrix)
+            geometries.push(f)
+        }
+
+        // Manual Merge Logic
+        let totalVerts = 0
+        geometries.forEach(g => totalVerts += g.attributes.position.count)
+
+        const mergedPos = new Float32Array(totalVerts * 3)
+        const mergedNorm = new Float32Array(totalVerts * 3)
+        const mergedUV = new Float32Array(totalVerts * 2)
+        const mergedColor = new Float32Array(totalVerts * 3)
+        const indices = []
+        let offset = 0
+
+        // Colors
+        const trunkColor = new THREE.Color("#5d4037")
+        const frondColor = new THREE.Color("#4a6f1b")
+
+        geometries.forEach((g, index) => {
+            const p = g.attributes.position.array
+            const n = g.attributes.normal.array
+            const uv = g.attributes.uv.array
+            const idx = g.index ? g.index.array : null
+
+            mergedPos.set(p, offset * 3)
+            mergedNorm.set(n, offset * 3)
+            mergedUV.set(uv, offset * 2)
+
+            // Vertex Colors
+            // index 0 is trunk, rest are fronds
+            const color = index === 0 ? trunkColor : frondColor
+            for (let k = 0; k < g.attributes.position.count; k++) {
+                mergedColor[offset * 3 + k * 3 + 0] = color.r
+                mergedColor[offset * 3 + k * 3 + 1] = color.g
+                mergedColor[offset * 3 + k * 3 + 2] = color.b
+            }
+
+            if (idx) {
+                for(let j=0; j<idx.length; j++) indices.push(idx[j] + offset)
+            } else {
+                 for(let j=0; j<g.attributes.position.count; j++) indices.push(j + offset)
+            }
+            offset += g.attributes.position.count
+        })
+
+        const palm = new THREE.BufferGeometry()
+        palm.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3))
+        palm.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3))
+        palm.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2))
+        palm.setAttribute('color', new THREE.BufferAttribute(mergedColor, 3))
+        if(indices.length > 0) palm.setIndex(indices)
+
+        return palm
+    }, [])
+}
+
+
 const Canopy = () => {
   const trunkGeo = TrunkGeometry()
   const leafClusterGeo = LeafClusterGeometry()
+  const palmGeo = usePalmGeometry()
 
-  const { trunks, leaves } = useMemo(() => {
+  const { trunks, leaves, palms } = useMemo(() => {
     const trunks = []
     const leaves = []
+    const palms = []
     const leafColors = [
         new THREE.Color("#2d4a22"),
         new THREE.Color("#3a5f2d"),
@@ -168,47 +291,58 @@ const Canopy = () => {
     for (let i = 0; i < TreeConfig.count; i++) {
       const x = (Math.random() - 0.5) * TreeConfig.area
       const z = (Math.random() - 0.5) * TreeConfig.area
-
       const terrainH = getTerrainHeight(x, z)
 
       if (terrainH < -0.5) continue;
 
       const height = TreeConfig.minHeight + Math.random() * (TreeConfig.maxHeight - TreeConfig.minHeight)
-      const scaleBase = 2.5 + Math.random() * 2.5
-      const rotation = Math.random() * Math.PI * 2
 
-      trunks.push({
-        position: [x, terrainH, z],
-        scale: [scaleBase, height, scaleBase],
-        rotation: [0, rotation, 0]
-      })
-
-      const clusterCount = 25 + Math.floor(Math.random() * 20)
-
-      for (let c = 0; c < clusterCount; c++) {
-          const hRatio = 0.4 + Math.random() * 0.6
-          const clusterY = height * hRatio
-
-          const maxR = 8.0 * (1.0 - Math.pow(hRatio - 0.4, 2.0));
-          const r = Math.random() * maxR + 1.0
-          const theta = Math.random() * Math.PI * 2
-
-          const lx = x + Math.cos(theta) * r
-          const lz = z + Math.sin(theta) * r
-
-          leaves.push({
-              position: [lx, terrainH + clusterY, lz],
-              rotation: [Math.random()*0.5, Math.random()*Math.PI*2, Math.random()*0.5],
-              scale: 1.2 + Math.random() * 1.0,
-              color: leafColors[Math.floor(Math.random() * leafColors.length)]
+      // 15% chance to be a Palm
+      if (Math.random() < 0.15) {
+          palms.push({
+              position: [x, terrainH, z],
+              scale: [3 + Math.random(), height * 0.8, 3 + Math.random()], // Palms are tall/thin but scale affects whole mesh
+              rotation: [0, Math.random() * Math.PI * 2, 0]
           })
+      } else {
+          // Standard Tree
+          const scaleBase = 2.5 + Math.random() * 2.5
+          const rotation = Math.random() * Math.PI * 2
+
+          trunks.push({
+            position: [x, terrainH, z],
+            scale: [scaleBase, height, scaleBase],
+            rotation: [0, rotation, 0]
+          })
+
+          const clusterCount = 25 + Math.floor(Math.random() * 20)
+
+          for (let c = 0; c < clusterCount; c++) {
+              const hRatio = 0.4 + Math.random() * 0.6
+              const clusterY = height * hRatio
+
+              const maxR = 8.0 * (1.0 - Math.pow(hRatio - 0.4, 2.0));
+              const r = Math.random() * maxR + 1.0
+              const theta = Math.random() * Math.PI * 2
+
+              const lx = x + Math.cos(theta) * r
+              const lz = z + Math.sin(theta) * r
+
+              leaves.push({
+                  position: [lx, terrainH + clusterY, lz],
+                  rotation: [Math.random()*0.5, Math.random()*Math.PI*2, Math.random()*0.5],
+                  scale: 1.2 + Math.random() * 1.0,
+                  color: leafColors[Math.floor(Math.random() * leafColors.length)]
+              })
+          }
       }
     }
-    return { trunks, leaves }
+    return { trunks, leaves, palms }
   }, [])
 
   return (
     <group>
+      {/* Standard Trees */}
       <Instances range={trunks.length} geometry={trunkGeo} castShadow receiveShadow>
         <BarkMaterial />
         {trunks.map((data, i) => (
@@ -227,6 +361,20 @@ const Canopy = () => {
             color={data.color}
           />
         ))}
+      </Instances>
+
+      {/* Palms (New) */}
+      <Instances range={palms.length} geometry={palmGeo} castShadow receiveShadow>
+         {/* Vertex colors enable distinction between trunk and leaves */}
+         <LeafMaterial vertexColors uWindStrength={0.4} uUseAlphaMask={0.0} />
+         {palms.map((data, i) => (
+            <Instance
+                key={`palm-${i}`}
+                position={data.position}
+                scale={data.scale}
+                rotation={data.rotation}
+            />
+         ))}
       </Instances>
 
       <Epiphytes trunks={trunks} />
