@@ -48,14 +48,25 @@ class RiverLayer {
     this.lastBubbleTime = 0
   }
   update(pos, time) {
-    const dist = Math.abs(pos.x)
+    // 3D Distance Logic: River is at X=0, Y=0 (approx).
+    // Penalize Y distance more heavily (times 2) to fade out when flying up.
+    const dist = Math.sqrt(pos.x**2 + (pos.y * 2)**2)
     const distFactor = Math.max(0, 1 - dist / 60)
     const vol = -60 + (distFactor * 35)
+
+    // Ensure finite values
+    if (!Number.isFinite(vol)) return
+
     const clampedVol = Math.max(-80, Math.min(-25, vol))
+
     this.rumble.volume.rampTo(clampedVol, 0.2)
     this.rushNoise.volume.rampTo(clampedVol - 5, 0.2)
-    const pan = THREE.MathUtils.clamp((0 - pos.x) / 40, -0.8, 0.8)
+
+    let pan = THREE.MathUtils.clamp((0 - pos.x) / 40, -0.8, 0.8)
+    if (!Number.isFinite(pan)) pan = 0
+
     this.panner.pan.rampTo(pan, 0.1)
+
     if (dist < 15 && time - this.lastBubbleTime > 0.2 + Math.random() * 0.5) {
       if (Math.random() > 0.7) {
         const freq = 150 + Math.random() * 100
@@ -113,11 +124,17 @@ class CanopyLayer {
   }
   update(pos, time) {
     const distToCanopy = Math.abs(pos.y - 25)
-    const vol = THREE.MathUtils.mapLinear(distToCanopy, 0, 25, -35, -65)
+    // Enveloping feel: louder near canopy, but never silent
+    let vol = THREE.MathUtils.mapLinear(distToCanopy, 0, 25, -35, -55)
+    if (!Number.isFinite(vol)) vol = -65
+
     const clampedVol = Math.max(-65, vol)
     this.airNoise.volume.rampTo(clampedVol - 5, 2)
     this.rustleNoise.volume.rampTo(clampedVol, 1)
-    const pan = THREE.MathUtils.clamp(pos.x / 100, -0.3, 0.3)
+
+    let pan = THREE.MathUtils.clamp(pos.x / 100, -0.3, 0.3)
+    if (!Number.isFinite(pan)) pan = 0
+
     this.panner.pan.rampTo(pan, 1)
   }
   dispose() { this.airNoise.dispose(); this.airFilter.dispose(); this.rustleNoise.dispose(); this.rustleFilter.dispose(); this.panner.dispose() }
@@ -346,7 +363,10 @@ class FootstepsLayer {
         this.snapEnv = new Tone.Envelope({ attack: 0.005, decay: 0.05, sustain: 0, release: 0.05 }).connect(this.snapGain.gain)
         this.splashSynth = new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.01, decay: 0.1, release: 0.3 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(this.panner)
         this.splashSynth.volume.value = -20
-        this.lastPos = null; this.distAcc = 0; this.stepInterval = 2.5
+        this.lastPos = null; this.distAcc = 0;
+
+        // Synced to 4.0u/s walking speed and 1.8Hz cadence -> ~2.2 units per step
+        this.stepInterval = 2.2
     }
     update(pos, time) {
         if (!this.lastPos) { this.lastPos = pos.clone(); return }
@@ -365,6 +385,44 @@ class FootstepsLayer {
     }
     dispose() { this.noise.dispose(); this.filter.dispose(); this.gain.dispose(); this.env.dispose(); this.snapNoise.dispose(); this.snapFilter.dispose(); this.snapGain.dispose(); this.snapEnv.dispose(); this.splashSynth.dispose(); this.panner.dispose() }
 }
+
+// --- Distant Thunder Layer (New) ---
+class DistantThunderLayer {
+    constructor(outputNode) {
+        this.output = outputNode
+        this.panner = new Tone.Panner3D(0, 50, -100).connect(this.output) // Far away
+
+        this.rumbleFilter = new Tone.Filter(150, "lowpass").connect(this.panner)
+        this.synth = new Tone.MembraneSynth({
+            pitchDecay: 0.1,
+            octaves: 4,
+            oscillator: { type: "sine" },
+            envelope: { attack: 0.5, decay: 3, sustain: 0, release: 2 }
+        }).connect(this.rumbleFilter)
+        this.synth.volume.value = -8
+
+        this.lastThunderTime = 0
+    }
+    update(pos, time) {
+        if (time - this.lastThunderTime > 30 + Math.random() * 30) { // Every 30-60s
+             if (Math.random() > 0.3) {
+                 // Randomize position
+                 const angle = Math.random() * Math.PI * 2
+                 const dist = 200 + Math.random() * 300
+                 this.panner.positionX.value = Math.cos(angle) * dist
+                 this.panner.positionY.value = 50
+                 this.panner.positionZ.value = Math.sin(angle) * dist
+
+                 this.synth.triggerAttackRelease("A0", "1n", time)
+                 this.lastThunderTime = time
+             }
+        }
+    }
+    dispose() {
+        this.synth.dispose(); this.rumbleFilter.dispose(); this.panner.dispose()
+    }
+}
+
 
 // --- Hummingbird Layer (Background/Loop) ---
 class HummingbirdLayer {
@@ -430,7 +488,8 @@ export class SoundscapeManager {
     this.wind = new WindLayer(this.masterComp)
     this.movement = new MovementLayer(this.masterComp)
     this.footsteps = new FootstepsLayer(this.masterComp)
-    this.hummingbirds = new HummingbirdLayer(this.masterComp) // New
+    this.hummingbirds = new HummingbirdLayer(this.masterComp)
+    this.distantThunder = new DistantThunderLayer(this.reverb) // Connect directly to reverb for space
 
     this.thunderSynth = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.05, decay: 2.5, sustain: 0 } }).connect(this.reverb)
     this.thunderSynth.volume.value = -15
@@ -449,12 +508,18 @@ export class SoundscapeManager {
 
   update(pos, speed = 0) {
     const p = (typeof pos === 'number') ? new THREE.Vector3(0, pos, 0) : pos
+
+    // Safety check for NaN positions which cause AudioParam errors
+    if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) return;
+    if (!Number.isFinite(speed)) speed = 0;
+
     const time = Tone.now()
     this.river.update(p, time); this.canopy.update(p, time); this.wood.update(p, time)
     this.rain.update(p, time); this.insects.update(p, time); this.creatures.update(p, time)
     this.frogs.update(p, time); this.howlers.update(p, time); this.ambience.update(p, time)
     this.deepAmbience.update(p, time); this.wind.update(p, time); this.movement.update(p, time, speed)
     this.footsteps.update(p, time); this.hummingbirds.update(p, time)
+    this.distantThunder.update(p, time)
   }
 
   triggerThunder(distance) {
@@ -479,7 +544,7 @@ export class SoundscapeManager {
     this.river.dispose(); this.canopy.dispose(); this.wood.dispose(); this.rain.dispose()
     this.insects.dispose(); this.creatures.dispose(); this.frogs.dispose(); this.howlers.dispose()
     this.ambience.dispose(); this.deepAmbience.dispose(); this.wind.dispose(); this.movement.dispose()
-    this.footsteps.dispose(); this.hummingbirds.dispose()
+    this.footsteps.dispose(); this.hummingbirds.dispose(); this.distantThunder.dispose()
     this.thunderSynth.dispose(); this.thunderRumble.dispose(); this.splashFX.dispose()
     this.reverb.dispose(); this.masterComp.dispose(); this.masterEQ.dispose(); this.limiter.dispose()
     Tone.Transport.stop()

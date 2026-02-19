@@ -117,17 +117,9 @@ const Scene = ({ audioStarted }) => {
       />
 
       <EffectComposer disableNormalPass>
-        {/* Depth of Field for cinematic look - Focuses closer (hands/ground) for immersion */}
-        {/* Reduced bokeh scale to avoid aggressive blurring */}
         <DepthOfField focusDistance={0.01} focalLength={0.02} bokehScale={1.5} height={480} />
-
-        {/* Bloom for fireflies and sun glints - Increased for "stunning" glow */}
         <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.8} height={300} intensity={0.9} />
-
-        {/* Subtle Noise for organic film grain texture - Increased for "grit" */}
         <Noise opacity={0.03} />
-
-        {/* Vignette to focus attention */}
         <Vignette eskil={false} offset={0.1} darkness={0.6} />
       </EffectComposer>
 

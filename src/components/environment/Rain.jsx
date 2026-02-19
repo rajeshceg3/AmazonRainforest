@@ -15,7 +15,6 @@ const Rain = ({ count = 6000 }) => {
       },
       vertexShader: `
         ${THREE.ShaderChunk.common}
-        ${THREE.ShaderChunk.instancing_pars_vertex}
 
         uniform float uTime;
         uniform float uHeight;

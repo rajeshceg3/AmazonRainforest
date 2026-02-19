@@ -23,8 +23,8 @@ const CameraController = () => {
 
   useEffect(() => {
     const handleScroll = (e) => {
-      // Sensitivity
-      const delta = e.deltaY * 0.01
+      // Sensitivity - Slowed down for smoother, weightier feel
+      const delta = e.deltaY * 0.005
       // Clamp between River/Floor (1) and Canopy (40 - increased ceiling)
       cameraY.current = Math.min(Math.max(cameraY.current + delta, 1), 40)
     }
@@ -125,8 +125,8 @@ const CameraController = () => {
   }, [])
 
   useFrame((state, delta) => {
-    // Keyboard Movement
-    const moveSpeed = 20.0 * delta // Units per second
+    // Keyboard Movement - Slowed to realistic walking pace (4.0 units/sec)
+    const moveSpeed = 4.0 * delta // Units per second
     const vx = (keys.current.d || keys.current.ArrowRight ? 1 : 0) - (keys.current.a || keys.current.ArrowLeft ? 1 : 0)
     const vz = (keys.current.s || keys.current.ArrowDown ? 1 : 0) - (keys.current.w || keys.current.ArrowUp ? 1 : 0)
 
@@ -147,9 +147,9 @@ const CameraController = () => {
         cameraY.current = THREE.MathUtils.lerp(cameraY.current, minAlt, 10.0 * delta)
     }
 
-    // Smooth interpolation
-    // Increase lerp speed for responsiveness if using keys
-    const lerpSpeed = (vx !== 0 || vz !== 0) ? 5.0 * delta : 2.0 * delta
+    // Smooth interpolation - Increased inertia for physical presence
+    // Increase lerp speed slightly for responsiveness if using keys, but keep it weighty
+    const lerpSpeed = (vx !== 0 || vz !== 0) ? 3.0 * delta : 1.5 * delta
 
     state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, cameraX.current, lerpSpeed)
     state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, cameraY.current, lerpSpeed)

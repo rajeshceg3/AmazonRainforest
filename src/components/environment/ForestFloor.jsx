@@ -3,6 +3,7 @@ import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 import { LeafMaterial } from '../shaders/LeafMaterial'
 import { TerrainMaterial } from '../shaders/TerrainMaterial'
+import { BarkMaterial } from '../shaders/BarkMaterial'
 import { getTerrainHeight } from '../../utils/TerrainHeight'
 
 // Helper to create Fern Geometry
@@ -246,6 +247,36 @@ const useFlowerGeometry = () => {
     }, [])
 }
 
+// --- Fallen Log Geometry (New) ---
+const useLogGeometry = () => {
+    return useMemo(() => {
+        const geo = new THREE.CylinderGeometry(0.2, 0.25, 3.0, 16, 12)
+        geo.rotateZ(Math.PI / 2) // Lie flat on X
+        geo.translate(0, 0.15, 0) // Sit on ground
+
+        const pos = geo.attributes.position
+        const v = new THREE.Vector3()
+
+        for (let i = 0; i < pos.count; i++) {
+            v.fromBufferAttribute(pos, i)
+
+            // Noise displacement for rotten look
+            const n = Math.sin(v.x * 5.0) * Math.cos(v.y * 5.0) * Math.sin(v.z * 5.0)
+            const scale = 1.0 + n * 0.1 + (Math.random() - 0.5) * 0.05
+
+            // Flatten slightly
+            if (v.y < 0.15) { // Bottom
+                 // v.y *= 0.8
+            }
+
+            v.multiplyScalar(scale)
+            pos.setXYZ(i, v.x, v.y, v.z)
+        }
+        geo.computeVertexNormals()
+        return geo
+    }, [])
+}
+
 const ForestFloor = () => {
   const fernCount = 5000
   const grassCount = 60000
@@ -253,6 +284,7 @@ const ForestFloor = () => {
   const broadleafCount = 1500
   const bushCount = 300
   const flowerCount = 2000
+  const logCount = 40
 
   const fernGeo = useFernGeometry()
   const grassGeo = useGrassGeometry()
@@ -260,6 +292,7 @@ const ForestFloor = () => {
   const broadleafGeo = useBroadleafGeometry()
   const bushGeo = useBushGeometry()
   const flowerGeo = useFlowerGeometry()
+  const logGeo = useLogGeometry()
 
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
@@ -446,12 +479,44 @@ const ForestFloor = () => {
       return data
   }, [fallenLeafCount])
 
+  const logData = useMemo(() => {
+      const data = []
+
+      for(let i=0; i<logCount; i++) {
+          const x = (Math.random() - 0.5) * 380
+          const z = (Math.random() - 0.5) * 380
+          const h = getTerrainHeight(x, z)
+
+          if (h < 0.0 || h > 20) continue; // Not in river, not too high
+
+          data.push({
+              position: [x, h, z],
+              rotation: [0, Math.random() * Math.PI * 2, 0],
+              scale: 1.0 + Math.random() * 0.5
+          })
+      }
+      return data
+  }, [logCount])
+
   return (
     <group>
         {/* Ground Mesh */}
         <mesh geometry={groundGeo} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
             <TerrainMaterial uScale={0.1} uColorSoil={new THREE.Color("#2b1d0e")} uColorMoss={new THREE.Color("#1a331a")} />
         </mesh>
+
+        {/* Logs (New) */}
+        <Instances range={logData.length} geometry={logGeo} castShadow receiveShadow>
+            <BarkMaterial />
+            {logData.map((data, i) => (
+                <Instance
+                    key={`log-${i}`}
+                    position={data.position}
+                    rotation={data.rotation}
+                    scale={data.scale}
+                />
+            ))}
+        </Instances>
 
         {/* Fallen Leaves */}
         <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow>
