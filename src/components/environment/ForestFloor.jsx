@@ -192,65 +192,165 @@ const useBroadleafGeometry = () => {
     }, [])
 }
 
+// Improved Bush Geometry: Volume of leaves instead of sphere
 const useBushGeometry = () => {
     return useMemo(() => {
-        const geometry = new THREE.SphereGeometry(0.8, 16, 16)
-        const pos = geometry.attributes.position
-        const v = new THREE.Vector3()
+        // Base leaf for bush
+        const leafGeo = new THREE.PlaneGeometry(0.3, 0.5, 2, 4);
+        leafGeo.translate(0, 0.25, 0); // Pivot at bottom
 
+        const pos = leafGeo.attributes.position;
+        const v = new THREE.Vector3();
         for (let i = 0; i < pos.count; i++) {
-            v.fromBufferAttribute(pos, i)
-            // Distort to look like a bush clump
-            const noise = Math.sin(v.x * 5) * Math.sin(v.y * 5) * Math.sin(v.z * 5)
-            const scale = 1.0 + noise * 0.3 + (Math.random() - 0.5) * 0.2
-            v.multiplyScalar(scale)
-            pos.setXYZ(i, v.x, v.y, v.z)
+             v.fromBufferAttribute(pos, i);
+             v.x *= (1.0 - v.y / 0.5); // Taper
+             v.z += Math.sin(v.y * 5.0) * 0.05; // Curl
+             pos.setXYZ(i, v.x, v.y, v.z);
         }
-        geometry.computeVertexNormals()
-        return geometry
+        leafGeo.computeVertexNormals();
+
+        const geometries = [];
+        const dummy = new THREE.Object3D();
+        const count = 40; // Dense clump
+
+        for (let i = 0; i < count; i++) {
+            const leaf = leafGeo.clone();
+
+            // Random point in sphere
+            const r = Math.pow(Math.random(), 0.3) * 0.6; // Bias towards surface
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta) + 0.3; // Lift up slightly
+            const z = r * Math.cos(phi);
+
+            dummy.position.set(x, y, z);
+            dummy.lookAt(x * 2, y * 2 + 1, z * 2); // Look out and up
+            dummy.rotation.z += (Math.random() - 0.5); // Random roll
+            dummy.scale.setScalar(0.5 + Math.random() * 0.5);
+            dummy.updateMatrix();
+
+            leaf.applyMatrix4(dummy.matrix);
+            geometries.push(leaf);
+        }
+
+        // Manual Merge
+        let totalVerts = 0;
+        geometries.forEach(g => totalVerts += g.attributes.position.count);
+        const mergedPos = new Float32Array(totalVerts * 3);
+        const mergedNorm = new Float32Array(totalVerts * 3);
+        const mergedUV = new Float32Array(totalVerts * 2);
+        const indices = [];
+        let offset = 0;
+
+        geometries.forEach(g => {
+            mergedPos.set(g.attributes.position.array, offset * 3);
+            mergedNorm.set(g.attributes.normal.array, offset * 3);
+            mergedUV.set(g.attributes.uv.array, offset * 2);
+            if (g.index) {
+                for (let j = 0; j < g.index.count; j++) indices.push(g.index.array[j] + offset);
+            } else {
+                for (let j = 0; j < g.attributes.position.count; j++) indices.push(j + offset);
+            }
+            offset += g.attributes.position.count;
+        });
+
+        const bush = new THREE.BufferGeometry();
+        bush.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+        bush.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3));
+        bush.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2));
+        bush.setIndex(indices);
+
+        return bush;
     }, [])
 }
 
+// Improved Flower Geometry: 3D shape
 const useFlowerGeometry = () => {
     return useMemo(() => {
-        // 5-petal star shape (10 segments: 5 outer, 5 inner)
-        const geometry = new THREE.CircleGeometry(0.15, 10)
-        geometry.rotateX(-Math.PI / 2) // Face up
+        // Base petal
+        const petalGeo = new THREE.PlaneGeometry(0.08, 0.25, 2, 4);
+        petalGeo.translate(0, 0.1, 0); // Pivot
 
-        const pos = geometry.attributes.position
-        const v = new THREE.Vector3()
+        // Shape petal
+        const pos = petalGeo.attributes.position;
+        const v = new THREE.Vector3();
+        for(let i=0; i<pos.count; i++) {
+            v.fromBufferAttribute(pos, i);
+            v.x *= (1.0 - Math.abs(v.y - 0.15) * 4.0); // Diamond shape roughly
+            if (v.x < 0.01 && v.x > -0.01) v.x *= 2.0; // Widen middle
+            v.z += Math.pow(v.y, 2.0) * 0.5; // Curl back
+            pos.setXYZ(i, v.x, v.y, v.z);
+        }
+        petalGeo.computeVertexNormals();
 
-        // Deform circle into star/flower
-        for (let i = 1; i < pos.count; i++) {
-             v.fromBufferAttribute(pos, i)
+        const geometries = [];
+        const dummy = new THREE.Object3D();
+        const petalCount = 8; // Two layers of 4? Or 8 around
 
-             // Even indices are "inner" points (between petals), Odd are "outer" (petals)
-             // Note: Index 0 is center. Indices 1..11 are perimeter.
-             // 1 is odd (tip), 2 is even (valley), etc.
-             if (i % 2 === 0) {
-                 v.multiplyScalar(0.4) // Pinch in for valley
-                 v.y += 0.05 // Lift center/valley
-             } else {
-                 // Petal tip
-                 v.y -= 0.02 // Curve down
-             }
-             pos.setXYZ(i, v.x, v.y, v.z)
+        // Layer 1
+        for (let i = 0; i < 5; i++) {
+            const p = petalGeo.clone();
+            const angle = (i / 5) * Math.PI * 2;
+            dummy.rotation.set(0.5, angle, 0); // Tilt out
+            dummy.updateMatrix();
+            p.applyMatrix4(dummy.matrix);
+            geometries.push(p);
+        }
+        // Layer 2 (Inner, smaller)
+        for (let i = 0; i < 5; i++) {
+            const p = petalGeo.clone();
+            const angle = (i / 5) * Math.PI * 2 + Math.PI / 5; // Offset
+            dummy.rotation.set(0.2, angle, 0); // More upright
+            dummy.scale.setScalar(0.7);
+            dummy.updateMatrix();
+            p.applyMatrix4(dummy.matrix);
+            geometries.push(p);
         }
 
-        // Center point depression
-        v.fromBufferAttribute(pos, 0)
-        v.y -= 0.05
-        pos.setXYZ(0, v.x, v.y, v.z)
+        // Center (stamen) - small cone/sphere
+        const center = new THREE.SphereGeometry(0.03, 8, 8);
+        center.translate(0, 0.02, 0);
+        geometries.push(center);
 
-        geometry.computeVertexNormals()
-        return geometry
+        // Manual Merge
+        let totalVerts = 0;
+        geometries.forEach(g => totalVerts += g.attributes.position.count);
+        const mergedPos = new Float32Array(totalVerts * 3);
+        const mergedNorm = new Float32Array(totalVerts * 3);
+        const mergedUV = new Float32Array(totalVerts * 2);
+        const indices = [];
+        let offset = 0;
+
+        geometries.forEach(g => {
+            mergedPos.set(g.attributes.position.array, offset * 3);
+            mergedNorm.set(g.attributes.normal.array, offset * 3);
+            // Sphere might not have UVs or different layout, but LeafMaterial ignores UVs mostly except for noise.
+            if (g.attributes.uv) mergedUV.set(g.attributes.uv.array, offset * 2);
+
+            if (g.index) {
+                for (let j = 0; j < g.index.count; j++) indices.push(g.index.array[j] + offset);
+            } else {
+                for (let j = 0; j < g.attributes.position.count; j++) indices.push(j + offset);
+            }
+            offset += g.attributes.position.count;
+        });
+
+        const flower = new THREE.BufferGeometry();
+        flower.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+        flower.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3));
+        flower.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2));
+        flower.setIndex(indices);
+
+        return flower;
     }, [])
 }
 
 // --- Fallen Log Geometry (New) ---
 const useLogGeometry = () => {
     return useMemo(() => {
-        const geo = new THREE.CylinderGeometry(0.2, 0.25, 3.0, 16, 12)
+        const geo = new THREE.CylinderGeometry(0.2, 0.25, 3.0, 32, 24) // Higher res
         geo.rotateZ(Math.PI / 2) // Lie flat on X
         geo.translate(0, 0.15, 0) // Sit on ground
 
@@ -262,11 +362,22 @@ const useLogGeometry = () => {
 
             // Noise displacement for rotten look
             const n = Math.sin(v.x * 5.0) * Math.cos(v.y * 5.0) * Math.sin(v.z * 5.0)
-            const scale = 1.0 + n * 0.1 + (Math.random() - 0.5) * 0.05
+            const n2 = Math.cos(v.x * 12.0) * 0.05; // Finer detail
 
-            // Flatten slightly
-            if (v.y < 0.15) { // Bottom
+            const scale = 1.0 + n * 0.15 + n2 + (Math.random() - 0.5) * 0.05
+
+            // Flatten bottom slightly
+            if (v.y < 0.15) {
                  // v.y *= 0.8
+            }
+
+            // Broken ends
+            if (Math.abs(v.x) > 1.3) {
+                 const dist = Math.abs(v.x) - 1.3;
+                 // Jagged ends
+                 v.x += (Math.random() - 0.5) * 0.2 * dist;
+                 const radialNoise = Math.sin(Math.atan2(v.z, v.y - 0.15) * 10.0);
+                 v.x += radialNoise * 0.1 * dist;
             }
 
             v.multiplyScalar(scale)
@@ -574,9 +685,9 @@ const ForestFloor = () => {
              ))}
         </Instances>
 
-        {/* Bush Instances */}
+        {/* Bush Instances (Update: uUseAlphaMask=1.0 for better leaf shape) */}
         <Instances range={bushData.length} geometry={bushGeo} castShadow receiveShadow>
-             <LeafMaterial color="#224422" uWindStrength={0.15} uWindSpeed={0.5} uUseAlphaMask={0.0} />
+             <LeafMaterial color="#224422" uWindStrength={0.15} uWindSpeed={0.5} uUseAlphaMask={1.0} />
              {bushData.map((data, i) => (
                  <Instance
                     key={`bush-${i}`}

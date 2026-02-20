@@ -1,9 +1,11 @@
 import React, { useRef, useLayoutEffect } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 export function LilyPadMaterial({ uColor = new THREE.Color('#4a6f1b'), uRimColor = new THREE.Color('#8b5a2b'), ...props }) {
   const materialRef = useRef()
   const uniforms = useRef({
+    uTime: { value: 0 },
     uColor: { value: uColor },
     uRimColor: { value: uRimColor }
   })
@@ -15,12 +17,19 @@ export function LilyPadMaterial({ uColor = new THREE.Color('#4a6f1b'), uRimColor
     }
   }, [uColor, uRimColor])
 
+  useFrame((state) => {
+      if (uniforms.current) {
+          uniforms.current.uTime.value = state.clock.elapsedTime
+      }
+  })
+
   useLayoutEffect(() => {
     if (!materialRef.current) return
 
     const material = materialRef.current
 
     material.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = uniforms.current.uTime
       shader.uniforms.uColor = uniforms.current.uColor
       shader.uniforms.uRimColor = uniforms.current.uRimColor
 
@@ -51,8 +60,59 @@ export function LilyPadMaterial({ uColor = new THREE.Color('#4a6f1b'), uRimColor
           g.yz = a0.yz * x12.xz + h.yz * x12.yw;
           return 130.0 * dot(m, g);
         }
+
+        // Wave function matching River.jsx roughly
+        float getWaveHeight(vec2 p, float uTime) {
+            float time = uTime * 0.5;
+            float wave1 = sin(p.x * 0.05 + time) * 0.5;
+            // River Y is World -Z (approx)
+            // But we use world coordinates directly here.
+            // If River uses local Y, and local Y corresponds to World Z (or -Z)
+            // Let's just use World X and Z.
+            // River: wave2 = cos(p.y * 0.1 ...)
+            // Here p.y is world Z.
+            float wave2 = cos(p.y * 0.1 + time * 1.6) * 0.2;
+            float wave3 = sin((p.x + p.y) * 0.05 + time * 0.6) * 0.3;
+            return wave1 + wave2 + wave3;
+        }
       `
 
+      // --- Vertex Shader Injection ---
+      shader.vertexShader = `
+        uniform float uTime;
+        ${noiseFunc}
+      ` + shader.vertexShader
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `
+        #include <begin_vertex>
+
+        // Calculate world position manually
+        #ifdef USE_INSTANCING
+          vec4 worldPos = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+        #else
+          vec4 worldPos = modelMatrix * vec4(transformed, 1.0);
+        #endif
+
+        // Apply Wave Displacement
+        // We want the lilypad to float on the water surface.
+        // The water surface is at y = -0.5 + waveHeight.
+        // The lilypad is positioned at y = -0.48.
+        // We want to add waveHeight to its Y position.
+
+        // Match River coordinate system: River Local Y = -World Z
+        vec2 wavePos = vec2(worldPos.x, -worldPos.z);
+        float waveH = getWaveHeight(wavePos, uTime);
+
+        // Displace along Local Z (which is World Y)
+        transformed.z += waveH;
+
+        `
+      )
+
+
+      // --- Fragment Shader Injection ---
       shader.fragmentShader = `
         uniform vec3 uColor;
         uniform vec3 uRimColor;
