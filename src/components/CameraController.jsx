@@ -9,8 +9,8 @@ const LOOK_SPEED = 0.002
 const TOUCH_LOOK_SPEED = 0.005
 const JUMP_FORCE = 8.0
 const GRAVITY = 20.0
-const DAMPING = 8.0
-const ACCEL = 60.0
+const DAMPING = 10.0
+const ACCEL = 65.0
 
 const CameraController = () => {
   const { camera, gl } = useThree()
@@ -24,6 +24,7 @@ const CameraController = () => {
   const velocity = useRef(new THREE.Vector3())
   const direction = useRef(new THREE.Vector3())
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
+  const targetEuler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
 
   // Touch State
   const touchLeftId = useRef(null)
@@ -41,6 +42,7 @@ const CameraController = () => {
   useEffect(() => {
     euler.current.setFromQuaternion(camera.quaternion)
     euler.current.z = 0
+    targetEuler.current.copy(euler.current)
 
     // Ensure touch actions don't trigger browser gestures
     gl.domElement.style.touchAction = 'none'
@@ -75,9 +77,9 @@ const CameraController = () => {
 
     const onMouseMove = (e) => {
       if (isLocked.current) {
-        euler.current.y -= e.movementX * LOOK_SPEED
-        euler.current.x -= e.movementY * LOOK_SPEED
-        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x))
+        targetEuler.current.y -= e.movementX * LOOK_SPEED
+        targetEuler.current.x -= e.movementY * LOOK_SPEED
+        targetEuler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetEuler.current.x))
       }
     }
 
@@ -95,7 +97,7 @@ const CameraController = () => {
       e.preventDefault()
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i]
-        const splitX = window.innerWidth * 0.4 // 40% left for move, 60% right for look
+        const splitX = window.innerWidth * 0.3 // 30% left for move, 70% right for look
 
         // Left Side -> Move (Virtual Stick)
         if (t.clientX < splitX && touchLeftId.current === null) {
@@ -123,9 +125,9 @@ const CameraController = () => {
             const dx = t.clientX - touchRightCurrent.current.x
             const dy = t.clientY - touchRightCurrent.current.y
 
-            euler.current.y -= dx * TOUCH_LOOK_SPEED
-            euler.current.x -= dy * TOUCH_LOOK_SPEED
-            euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x))
+            targetEuler.current.y -= dx * TOUCH_LOOK_SPEED
+            targetEuler.current.x -= dy * TOUCH_LOOK_SPEED
+            targetEuler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetEuler.current.x))
 
             touchRightCurrent.current.set(t.clientX, t.clientY)
         }
@@ -184,9 +186,12 @@ const CameraController = () => {
         const dx = touchLeftCurrent.current.x - touchLeftStart.current.x
         const dy = touchLeftCurrent.current.y - touchLeftStart.current.y
         const maxDist = 50
+        const deadzone = 10
 
-        touchRight = THREE.MathUtils.clamp(dx / maxDist, -1, 1)
-        touchForward = THREE.MathUtils.clamp(-dy / maxDist, -1, 1)
+        if (dx * dx + dy * dy > deadzone * deadzone) {
+            touchRight = THREE.MathUtils.clamp(dx / maxDist, -1, 1)
+            touchForward = THREE.MathUtils.clamp(-dy / maxDist, -1, 1)
+        }
     }
 
     // Combine Inputs
@@ -250,6 +255,10 @@ const CameraController = () => {
     euler.current.z = currentRoll.current
 
     // 7. Apply Rotation
+    // Smooth Look
+    euler.current.x = THREE.MathUtils.lerp(euler.current.x, targetEuler.current.x, 15.0 * delta)
+    euler.current.y = THREE.MathUtils.lerp(euler.current.y, targetEuler.current.y, 15.0 * delta)
+
     camera.quaternion.setFromEuler(euler.current)
 
     // 8. World Bounds Clamp
