@@ -30,8 +30,9 @@ const Overlay = () => {
       </div>
 
       {/* Interaction Hint */}
-      <div className="absolute bottom-8 text-[10px] opacity-30">
-        Scroll / Drag to Explore Layers
+      <div className="absolute bottom-8 text-[10px] opacity-30 text-center">
+        <span className="hidden sm:inline">Click to Look • WASD to Move • Shift to Run</span>
+        <span className="sm:hidden">Left Drag to Move • Right Drag to Look</span>
       </div>
     </div>
   )

@@ -1,186 +1,260 @@
-import { useFrame } from '@react-three/fiber'
-import { useRef, useEffect } from 'react'
+import { useThree, useFrame } from '@react-three/fiber'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { getTerrainHeight } from '../utils/TerrainHeight'
 
+const WALK_SPEED = 4.0
+const RUN_SPEED = 10.0
+const LOOK_SPEED = 0.002
+const TOUCH_LOOK_SPEED = 0.005
+const JUMP_FORCE = 8.0
+const GRAVITY = 20.0
+const DAMPING = 8.0
+const ACCEL = 60.0
+
 const CameraController = () => {
-  const target = useRef(new THREE.Vector3(0, 2, 0)) // LookAt target
-  const cameraY = useRef(10) // Start higher for better view
-  const cameraX = useRef(0)
-  const cameraZ = useRef(10) // Initial Z offset
+  const { camera, gl } = useThree()
 
-  // Movement state
-  const isDragging = useRef(false)
-  const lastMouseX = useRef(0)
-  const lastMouseY = useRef(0)
+  // State
+  const isLocked = useRef(false)
+  const moveState = useRef({
+    forward: 0, backward: 0, left: 0, right: 0,
+    sprint: false, jump: false
+  })
+  const velocity = useRef(new THREE.Vector3())
+  const direction = useRef(new THREE.Vector3())
+  const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
 
-  // Keyboard State
-  const keys = useRef({ w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false })
+  // Touch State
+  const touchLeftId = useRef(null)
+  const touchRightId = useRef(null)
+  const touchLeftStart = useRef(new THREE.Vector2())
+  const touchRightStart = useRef(new THREE.Vector2())
+  const touchLeftCurrent = useRef(new THREE.Vector2())
+  const touchRightCurrent = useRef(new THREE.Vector2())
 
   // FX State
   const bobPhase = useRef(0)
   const currentRoll = useRef(0)
 
+  // Initialize camera rotation from current camera
   useEffect(() => {
-    const handleScroll = (e) => {
-      // Sensitivity - Slowed down for smoother, weightier feel
-      const delta = e.deltaY * 0.005
-      // Clamp between River/Floor (1) and Canopy (40 - increased ceiling)
-      cameraY.current = Math.min(Math.max(cameraY.current + delta, 1), 40)
+    euler.current.setFromQuaternion(camera.quaternion)
+    euler.current.z = 0
+
+    // Ensure touch actions don't trigger browser gestures
+    gl.domElement.style.touchAction = 'none'
+  }, [camera, gl])
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp': moveState.current.forward = 1; break
+        case 'KeyS': case 'ArrowDown': moveState.current.backward = 1; break
+        case 'KeyA': case 'ArrowLeft': moveState.current.left = 1; break
+        case 'KeyD': case 'ArrowRight': moveState.current.right = 1; break
+        case 'ShiftLeft': case 'ShiftRight': moveState.current.sprint = true; break
+        case 'Space':
+          if(!moveState.current.jump) {
+             velocity.current.y = JUMP_FORCE
+             moveState.current.jump = true
+          }
+          break
+      }
     }
 
-    const handleKeyDown = (e) => {
-        if (keys.current.hasOwnProperty(e.key)) {
-            keys.current[e.key] = true
+    const onKeyUp = (e) => {
+      switch (e.code) {
+        case 'KeyW': case 'ArrowUp': moveState.current.forward = 0; break
+        case 'KeyS': case 'ArrowDown': moveState.current.backward = 0; break
+        case 'KeyA': case 'ArrowLeft': moveState.current.left = 0; break
+        case 'KeyD': case 'ArrowRight': moveState.current.right = 0; break
+        case 'ShiftLeft': case 'ShiftRight': moveState.current.sprint = false; break
+      }
+    }
+
+    const onMouseMove = (e) => {
+      if (isLocked.current) {
+        euler.current.y -= e.movementX * LOOK_SPEED
+        euler.current.x -= e.movementY * LOOK_SPEED
+        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x))
+      }
+    }
+
+    const onClick = () => {
+      // Only lock if not using touch (avoid conflict on hybrid devices if needed, but usually fine)
+      gl.domElement.requestPointerLock()
+    }
+
+    const onPointerLockChange = () => {
+      isLocked.current = document.pointerLockElement === gl.domElement
+    }
+
+    // Touch Handlers
+    const onTouchStart = (e) => {
+      e.preventDefault()
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i]
+        const splitX = window.innerWidth * 0.4 // 40% left for move, 60% right for look
+
+        // Left Side -> Move (Virtual Stick)
+        if (t.clientX < splitX && touchLeftId.current === null) {
+          touchLeftId.current = t.identifier
+          touchLeftStart.current.set(t.clientX, t.clientY)
+          touchLeftCurrent.current.set(t.clientX, t.clientY)
         }
-    }
-
-    const handleKeyUp = (e) => {
-        if (keys.current.hasOwnProperty(e.key)) {
-            keys.current[e.key] = false
+        // Right Side -> Look (Drag)
+        else if (t.clientX >= splitX && touchRightId.current === null) {
+          touchRightId.current = t.identifier
+          touchRightStart.current.set(t.clientX, t.clientY)
+          touchRightCurrent.current.set(t.clientX, t.clientY)
         }
+      }
     }
 
-    const handleMouseDown = (e) => {
-      isDragging.current = true
-      lastMouseX.current = e.clientX
-      lastMouseY.current = e.clientY
+    const onTouchMove = (e) => {
+      e.preventDefault()
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i]
+        if (t.identifier === touchLeftId.current) {
+            touchLeftCurrent.current.set(t.clientX, t.clientY)
+        }
+        if (t.identifier === touchRightId.current) {
+            const dx = t.clientX - touchRightCurrent.current.x
+            const dy = t.clientY - touchRightCurrent.current.y
+
+            euler.current.y -= dx * TOUCH_LOOK_SPEED
+            euler.current.x -= dy * TOUCH_LOOK_SPEED
+            euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x))
+
+            touchRightCurrent.current.set(t.clientX, t.clientY)
+        }
+      }
     }
 
-    const handleMouseMove = (e) => {
-      if (!isDragging.current) return
-
-      const deltaX = (e.clientX - lastMouseX.current) * 0.1
-      const deltaY = (e.clientY - lastMouseY.current) * 0.1
-
-      // Dragging moves the camera in X and Z
-      // Drag left/right -> Move X (Standard Push/Drone controls)
-      cameraX.current += deltaX
-      // Drag up/down -> Move Z (Standard Push/Drone controls)
-      cameraZ.current += deltaY
-
-      // Clamp to world bounds (-200 to 200)
-      cameraX.current = Math.min(Math.max(cameraX.current, -200), 200)
-      cameraZ.current = Math.min(Math.max(cameraZ.current, -200), 200)
-
-      lastMouseX.current = e.clientX
-      lastMouseY.current = e.clientY
+    const onTouchEnd = (e) => {
+      e.preventDefault()
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i]
+        if (t.identifier === touchLeftId.current) {
+          touchLeftId.current = null
+          touchLeftStart.current.set(0,0)
+          touchLeftCurrent.current.set(0,0)
+        }
+        if (t.identifier === touchRightId.current) {
+          touchRightId.current = null
+        }
+      }
     }
 
-    const handleMouseUp = () => {
-      isDragging.current = false
-    }
-
-    // Touch support
-    const handleTouchStart = (e) => {
-      isDragging.current = true
-      lastMouseX.current = e.touches[0].clientX
-      lastMouseY.current = e.touches[0].clientY
-    }
-
-    const handleTouchMove = (e) => {
-      if (!isDragging.current) return
-
-      const clientX = e.touches[0].clientX
-      const clientY = e.touches[0].clientY
-
-      const deltaX = (clientX - lastMouseX.current) * 0.1
-      const deltaY = (clientY - lastMouseY.current) * 0.1
-
-      cameraX.current += deltaX
-      cameraZ.current += deltaY
-
-      cameraX.current = Math.min(Math.max(cameraX.current, -200), 200)
-      cameraZ.current = Math.min(Math.max(cameraZ.current, -200), 200)
-
-      lastMouseX.current = clientX
-      lastMouseY.current = clientY
-    }
-
-    const handleTouchEnd = () => {
-      isDragging.current = false
-    }
-
-    window.addEventListener('wheel', handleScroll)
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-    window.addEventListener('mousedown', handleMouseDown)
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    window.addEventListener('touchstart', handleTouchStart)
-    window.addEventListener('touchmove', handleTouchMove)
-    window.addEventListener('touchend', handleTouchEnd)
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keyup', onKeyUp)
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('pointerlockchange', onPointerLockChange)
+    gl.domElement.addEventListener('click', onClick)
+    gl.domElement.addEventListener('touchstart', onTouchStart, { passive: false })
+    gl.domElement.addEventListener('touchmove', onTouchMove, { passive: false })
+    gl.domElement.addEventListener('touchend', onTouchEnd)
 
     return () => {
-      window.removeEventListener('wheel', handleScroll)
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-      window.removeEventListener('mousedown', handleMouseDown)
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-      window.removeEventListener('touchstart', handleTouchStart)
-      window.removeEventListener('touchmove', handleTouchMove)
-      window.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keyup', onKeyUp)
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('pointerlockchange', onPointerLockChange)
+      gl.domElement.removeEventListener('click', onClick)
+      gl.domElement.removeEventListener('touchstart', onTouchStart)
+      gl.domElement.removeEventListener('touchmove', onTouchMove)
+      gl.domElement.removeEventListener('touchend', onTouchEnd)
     }
-  }, [])
+  }, [gl])
 
   useFrame((state, delta) => {
-    // Keyboard Movement - Slowed to realistic walking pace (4.0 units/sec)
-    const moveSpeed = 4.0 * delta // Units per second
-    const vx = (keys.current.d || keys.current.ArrowRight ? 1 : 0) - (keys.current.a || keys.current.ArrowLeft ? 1 : 0)
-    const vz = (keys.current.s || keys.current.ArrowDown ? 1 : 0) - (keys.current.w || keys.current.ArrowUp ? 1 : 0)
+    // 1. Calculate Input Direction
+    direction.current.set(0, 0, 0)
 
-    // Update target position based on input
-    cameraX.current += vx * moveSpeed
-    cameraZ.current += vz * moveSpeed
+    // Keyboard Input
+    const forward = moveState.current.forward - moveState.current.backward
+    const right = moveState.current.right - moveState.current.left
 
-    // Clamp X/Z to world bounds
-    cameraX.current = Math.min(Math.max(cameraX.current, -200), 200)
-    cameraZ.current = Math.min(Math.max(cameraZ.current, -200), 200)
+    // Touch Input (Virtual Stick)
+    let touchForward = 0
+    let touchRight = 0
 
-    // Terrain Collision Logic
-    const groundH = getTerrainHeight(cameraX.current, cameraZ.current)
-    const minAlt = groundH + 1.8 // Eye level approx 1.8m
+    if (touchLeftId.current !== null) {
+        const dx = touchLeftCurrent.current.x - touchLeftStart.current.x
+        const dy = touchLeftCurrent.current.y - touchLeftStart.current.y
+        const maxDist = 50
 
-    // Soft clamp Y to stay above ground
-    if (cameraY.current < minAlt) {
-        cameraY.current = THREE.MathUtils.lerp(cameraY.current, minAlt, 10.0 * delta)
+        touchRight = THREE.MathUtils.clamp(dx / maxDist, -1, 1)
+        touchForward = THREE.MathUtils.clamp(-dy / maxDist, -1, 1)
     }
 
-    // Smooth interpolation - Increased inertia for physical presence
-    // Increase lerp speed slightly for responsiveness if using keys, but keep it weighty
-    const lerpSpeed = (vx !== 0 || vz !== 0) ? 3.0 * delta : 1.5 * delta
+    // Combine Inputs
+    const fwd = THREE.MathUtils.clamp(forward + touchForward, -1, 1)
+    const rgt = THREE.MathUtils.clamp(right + touchRight, -1, 1)
 
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, cameraX.current, lerpSpeed)
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, cameraY.current, lerpSpeed)
-    state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, cameraZ.current, lerpSpeed)
-
-    // Head Bob (Only when close to ground and moving)
-    const isMoving = vx !== 0 || vz !== 0
-    const isLow = state.camera.position.y < 8 // Only bob when near ground
-
-    if (isMoving && isLow) {
-        bobPhase.current += delta * 14.0 // Walking frequency
-        const bobY = Math.sin(bobPhase.current) * 0.15 // Amplitude
-        state.camera.position.y += bobY
+    // Direction relative to camera yaw
+    if (fwd !== 0 || rgt !== 0) {
+        const moveDir = new THREE.Vector3(rgt, 0, -fwd)
+        moveDir.applyEuler(new THREE.Euler(0, euler.current.y, 0))
+        direction.current.copy(moveDir).normalize()
     }
 
-    // Dynamic pitch based on altitude
-    const t = THREE.MathUtils.clamp((state.camera.position.y - 1.8) / 38.2, 0, 1)
-    const lookOffsetZ = THREE.MathUtils.lerp(-20, -5, t)
+    // 2. Physics & Velocity
+    const speed = moveState.current.sprint ? RUN_SPEED : WALK_SPEED
+    const hasInput = fwd !== 0 || rgt !== 0
 
-    target.current.set(
-        state.camera.position.x,
-        Math.max(groundH, state.camera.position.y - 5),
-        state.camera.position.z + lookOffsetZ
-    )
+    if (hasInput) {
+        velocity.current.x += direction.current.x * ACCEL * delta
+        velocity.current.z += direction.current.z * ACCEL * delta
+    }
 
-    state.camera.lookAt(target.current)
+    velocity.current.x -= velocity.current.x * DAMPING * delta
+    velocity.current.z -= velocity.current.z * DAMPING * delta
 
-    // Banking (Roll) - Applied after lookAt
-    const targetRoll = -vx * 0.05
+    const hSpeed = Math.sqrt(velocity.current.x**2 + velocity.current.z**2)
+    if (hSpeed > speed) {
+        const ratio = speed / hSpeed
+        velocity.current.x *= ratio
+        velocity.current.z *= ratio
+    }
+
+    velocity.current.y -= GRAVITY * delta
+
+    // 3. Update Position
+    camera.position.x += velocity.current.x * delta
+    camera.position.z += velocity.current.z * delta
+    camera.position.y += velocity.current.y * delta
+
+    // 4. Terrain Collision
+    const terrainH = getTerrainHeight(camera.position.x, camera.position.z)
+    const eyeH = terrainH + 1.8
+
+    if (camera.position.y < eyeH) {
+        camera.position.y = eyeH
+        velocity.current.y = 0
+        moveState.current.jump = false
+    }
+
+    // 5. FX: Head Bob
+    if (hasInput && camera.position.y <= eyeH + 0.1) {
+        const bobFreq = moveState.current.sprint ? 18 : 12
+        const bobAmp = moveState.current.sprint ? 0.15 : 0.08
+        bobPhase.current += delta * bobFreq
+        camera.position.y += Math.sin(bobPhase.current) * bobAmp
+    }
+
+    // 6. FX: Banking
+    const targetRoll = -rgt * 0.05
     currentRoll.current = THREE.MathUtils.lerp(currentRoll.current, targetRoll, 5.0 * delta)
-    state.camera.rotation.z = currentRoll.current
+    euler.current.z = currentRoll.current
+
+    // 7. Apply Rotation
+    camera.quaternion.setFromEuler(euler.current)
+
+    // 8. World Bounds Clamp
+    camera.position.x = THREE.MathUtils.clamp(camera.position.x, -200, 200)
+    camera.position.z = THREE.MathUtils.clamp(camera.position.z, -200, 200)
   })
 
   return null
