@@ -9,8 +9,11 @@ const LOOK_SPEED = 0.002
 const TOUCH_LOOK_SPEED = 0.005
 const JUMP_FORCE = 8.0
 const GRAVITY = 20.0
-const DAMPING = 10.0
-const ACCEL = 65.0
+const DAMPING = 8.0 // Reduced for weightier feel
+const ACCEL = 50.0 // Adjusted for smoother acceleration
+const INPUT_SMOOTHING = 8.0 // Lerp speed for input ramping
+const TOUCH_DEADZONE = 25
+const TOUCH_JOYSTICK_MAX_DIST = 50
 
 const CameraController = () => {
   const { camera, gl } = useThree()
@@ -21,8 +24,14 @@ const CameraController = () => {
     forward: 0, backward: 0, left: 0, right: 0,
     sprint: false, jump: false
   })
+
+  // Physics & Input State
   const velocity = useRef(new THREE.Vector3())
   const direction = useRef(new THREE.Vector3())
+  const currentInput = useRef(new THREE.Vector2()) // Smoothed input (x=right, y=forward)
+  const targetInput = useRef(new THREE.Vector2())  // Raw target input
+
+  // Camera Orientation
   const euler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
   const targetEuler = useRef(new THREE.Euler(0, 0, 0, 'YXZ'))
 
@@ -84,8 +93,9 @@ const CameraController = () => {
     }
 
     const onClick = () => {
-      // Only lock if not using touch (avoid conflict on hybrid devices if needed, but usually fine)
-      gl.domElement.requestPointerLock()
+      if (!document.pointerLockElement) {
+        gl.domElement.requestPointerLock()
+      }
     }
 
     const onPointerLockChange = () => {
@@ -94,7 +104,9 @@ const CameraController = () => {
 
     // Touch Handlers
     const onTouchStart = (e) => {
-      e.preventDefault()
+      // Prevent default to stop scrolling/zooming
+      if (e.cancelable) e.preventDefault()
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i]
         const splitX = window.innerWidth * 0.3 // 30% left for move, 70% right for look
@@ -115,16 +127,22 @@ const CameraController = () => {
     }
 
     const onTouchMove = (e) => {
-      e.preventDefault()
+      if (e.cancelable) e.preventDefault()
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i]
+
+        // Update Left Stick
         if (t.identifier === touchLeftId.current) {
             touchLeftCurrent.current.set(t.clientX, t.clientY)
         }
+
+        // Update Right Look
         if (t.identifier === touchRightId.current) {
             const dx = t.clientX - touchRightCurrent.current.x
             const dy = t.clientY - touchRightCurrent.current.y
 
+            // Apply directly to targetEuler for responsiveness
             targetEuler.current.y -= dx * TOUCH_LOOK_SPEED
             targetEuler.current.x -= dy * TOUCH_LOOK_SPEED
             targetEuler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetEuler.current.x))
@@ -135,7 +153,8 @@ const CameraController = () => {
     }
 
     const onTouchEnd = (e) => {
-      e.preventDefault()
+      if (e.cancelable) e.preventDefault()
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const t = e.changedTouches[i]
         if (t.identifier === touchLeftId.current) {
@@ -171,45 +190,62 @@ const CameraController = () => {
   }, [gl])
 
   useFrame((state, delta) => {
-    // 1. Calculate Input Direction
-    direction.current.set(0, 0, 0)
+    // 1. Calculate Raw Target Input
+    const kbdForward = moveState.current.forward - moveState.current.backward
+    const kbdRight = moveState.current.right - moveState.current.left
 
-    // Keyboard Input
-    const forward = moveState.current.forward - moveState.current.backward
-    const right = moveState.current.right - moveState.current.left
-
-    // Touch Input (Virtual Stick)
+    // Touch Input (Virtual Stick) with Curve
     let touchForward = 0
     let touchRight = 0
 
     if (touchLeftId.current !== null) {
-        const dx = touchLeftCurrent.current.x - touchLeftStart.current.x
-        const dy = touchLeftCurrent.current.y - touchLeftStart.current.y
-        const maxDist = 50
-        const deadzone = 10
+        const rawDx = touchLeftCurrent.current.x - touchLeftStart.current.x
+        const rawDy = touchLeftCurrent.current.y - touchLeftStart.current.y
 
-        if (dx * dx + dy * dy > deadzone * deadzone) {
-            touchRight = THREE.MathUtils.clamp(dx / maxDist, -1, 1)
-            touchForward = THREE.MathUtils.clamp(-dy / maxDist, -1, 1)
+        const dist = Math.sqrt(rawDx*rawDx + rawDy*rawDy)
+
+        if (dist > TOUCH_DEADZONE) {
+            // Normalize direction
+            const normX = rawDx / dist
+            const normY = rawDy / dist
+
+            // Calculate magnitude (0 to 1)
+            const magnitude = Math.min((dist - TOUCH_DEADZONE) / (TOUCH_JOYSTICK_MAX_DIST - TOUCH_DEADZONE), 1.0)
+
+            // Apply squared curve for fine control
+            const curvedMag = magnitude * magnitude
+
+            touchRight = normX * curvedMag
+            touchForward = -normY * curvedMag
         }
     }
 
     // Combine Inputs
-    const fwd = THREE.MathUtils.clamp(forward + touchForward, -1, 1)
-    const rgt = THREE.MathUtils.clamp(right + touchRight, -1, 1)
+    targetInput.current.x = THREE.MathUtils.clamp(kbdRight + touchRight, -1, 1)
+    targetInput.current.y = THREE.MathUtils.clamp(kbdForward + touchForward, -1, 1)
 
-    // Direction relative to camera yaw
-    if (fwd !== 0 || rgt !== 0) {
-        const moveDir = new THREE.Vector3(rgt, 0, -fwd)
-        moveDir.applyEuler(new THREE.Euler(0, euler.current.y, 0))
-        direction.current.copy(moveDir).normalize()
+    // Normalize if length > 1 to prevent faster diagonal movement
+    if (targetInput.current.lengthSq() > 1) {
+        targetInput.current.normalize()
     }
 
-    // 2. Physics & Velocity
-    const speed = moveState.current.sprint ? RUN_SPEED : WALK_SPEED
-    const hasInput = fwd !== 0 || rgt !== 0
+    // 2. Smooth Input
+    currentInput.current.x = THREE.MathUtils.lerp(currentInput.current.x, targetInput.current.x, delta * INPUT_SMOOTHING)
+    currentInput.current.y = THREE.MathUtils.lerp(currentInput.current.y, targetInput.current.y, delta * INPUT_SMOOTHING)
 
-    if (hasInput) {
+    // Direction relative to camera yaw
+    direction.current.set(0, 0, 0)
+    if (Math.abs(currentInput.current.x) > 0.001 || Math.abs(currentInput.current.y) > 0.001) {
+        const moveDir = new THREE.Vector3(currentInput.current.x, 0, -currentInput.current.y)
+        moveDir.applyEuler(new THREE.Euler(0, euler.current.y, 0))
+        direction.current.copy(moveDir) // Do not normalize, keep magnitude for speed control!
+    }
+
+    // 3. Physics & Velocity
+    const speed = moveState.current.sprint ? RUN_SPEED : WALK_SPEED
+
+    // Apply acceleration based on smoothed direction magnitude
+    if (direction.current.lengthSq() > 0.0001) {
         velocity.current.x += direction.current.x * ACCEL * delta
         velocity.current.z += direction.current.z * ACCEL * delta
     }
@@ -217,21 +253,26 @@ const CameraController = () => {
     velocity.current.x -= velocity.current.x * DAMPING * delta
     velocity.current.z -= velocity.current.z * DAMPING * delta
 
+    // Cap horizontal speed
     const hSpeed = Math.sqrt(velocity.current.x**2 + velocity.current.z**2)
-    if (hSpeed > speed) {
-        const ratio = speed / hSpeed
+    // Dynamic max speed based on input magnitude (allows slow walking)
+    const inputMag = currentInput.current.length()
+    const currentMaxSpeed = speed * Math.max(inputMag, 0.2) // prevent 0 max speed
+
+    if (hSpeed > currentMaxSpeed) {
+        const ratio = currentMaxSpeed / hSpeed
         velocity.current.x *= ratio
         velocity.current.z *= ratio
     }
 
     velocity.current.y -= GRAVITY * delta
 
-    // 3. Update Position
+    // 4. Update Position
     camera.position.x += velocity.current.x * delta
     camera.position.z += velocity.current.z * delta
     camera.position.y += velocity.current.y * delta
 
-    // 4. Terrain Collision
+    // 5. Terrain Collision
     const terrainH = getTerrainHeight(camera.position.x, camera.position.z)
     const eyeH = terrainH + 1.8
 
@@ -241,27 +282,28 @@ const CameraController = () => {
         moveState.current.jump = false
     }
 
-    // 5. FX: Head Bob
-    if (hasInput && camera.position.y <= eyeH + 0.1) {
+    // 6. FX: Head Bob
+    // Only bob if actually moving and on ground
+    if (hSpeed > 0.5 && camera.position.y <= eyeH + 0.1) {
         const bobFreq = moveState.current.sprint ? 18 : 12
-        const bobAmp = moveState.current.sprint ? 0.15 : 0.08
+        const bobAmp = (moveState.current.sprint ? 0.15 : 0.08) * (hSpeed / speed) // Scale bob by speed
         bobPhase.current += delta * bobFreq
         camera.position.y += Math.sin(bobPhase.current) * bobAmp
     }
 
-    // 6. FX: Banking
-    const targetRoll = -rgt * 0.05
+    // 7. FX: Banking
+    const targetRoll = -currentInput.current.x * 0.05
     currentRoll.current = THREE.MathUtils.lerp(currentRoll.current, targetRoll, 5.0 * delta)
     euler.current.z = currentRoll.current
 
-    // 7. Apply Rotation
-    // Smooth Look
-    euler.current.x = THREE.MathUtils.lerp(euler.current.x, targetEuler.current.x, 15.0 * delta)
-    euler.current.y = THREE.MathUtils.lerp(euler.current.y, targetEuler.current.y, 15.0 * delta)
+    // 8. Apply Rotation
+    // Smooth Look (Slower lerp for weight)
+    euler.current.x = THREE.MathUtils.lerp(euler.current.x, targetEuler.current.x, 10.0 * delta)
+    euler.current.y = THREE.MathUtils.lerp(euler.current.y, targetEuler.current.y, 10.0 * delta)
 
     camera.quaternion.setFromEuler(euler.current)
 
-    // 8. World Bounds Clamp
+    // 9. World Bounds Clamp
     camera.position.x = THREE.MathUtils.clamp(camera.position.x, -200, 200)
     camera.position.z = THREE.MathUtils.clamp(camera.position.z, -200, 200)
   })

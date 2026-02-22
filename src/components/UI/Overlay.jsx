@@ -10,6 +10,7 @@ const quotes = [
 const Overlay = () => {
   const [quoteIndex, setQuoteIndex] = useState(0)
   const [visible, setVisible] = useState(true)
+  const [showHint, setShowHint] = useState(true)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,7 +21,15 @@ const Overlay = () => {
       }, 2000)
     }, 10000)
 
-    return () => clearInterval(interval)
+    // Hint fade out timer
+    const hintTimer = setTimeout(() => {
+      setShowHint(false)
+    }, 8000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(hintTimer)
+    }
   }, [])
 
   return (
@@ -30,7 +39,7 @@ const Overlay = () => {
       </div>
 
       {/* Interaction Hint */}
-      <div className="absolute bottom-8 text-[10px] opacity-30 text-center">
+      <div className={`absolute bottom-8 text-[10px] text-center transition-opacity duration-2000 ease-in-out ${showHint ? 'opacity-30' : 'opacity-0'}`}>
         <span className="hidden sm:inline">Click to Look • WASD to Move • Shift to Run</span>
         <span className="sm:hidden">Left Drag to Move • Right Drag to Look</span>
       </div>
