@@ -12,7 +12,7 @@ const GRAVITY = 20.0
 const DAMPING = 8.0 // Reduced for weightier feel
 const ACCEL = 50.0 // Adjusted for smoother acceleration
 const INPUT_SMOOTHING = 8.0 // Lerp speed for input ramping
-const TOUCH_DEADZONE = 25
+const TOUCH_DEADZONE = 35
 const TOUCH_JOYSTICK_MAX_DIST = 50
 
 const CameraController = () => {
@@ -20,6 +20,10 @@ const CameraController = () => {
 
   // State
   const isLocked = useRef(false)
+  const isDragging = useRef(false)
+  const dragStart = useRef(new THREE.Vector2())
+  const lastMousePos = useRef(new THREE.Vector2())
+  const hasDragged = useRef(false)
   const moveState = useRef({
     forward: 0, backward: 0, left: 0, right: 0,
     sprint: false, jump: false
@@ -84,16 +88,43 @@ const CameraController = () => {
       }
     }
 
+    const onMouseDown = (e) => {
+      if (!isLocked.current) {
+        isDragging.current = true
+        dragStart.current.set(e.clientX, e.clientY)
+        lastMousePos.current.set(e.clientX, e.clientY)
+        hasDragged.current = false
+      }
+    }
+
+    const onMouseUp = () => {
+      isDragging.current = false
+    }
+
     const onMouseMove = (e) => {
       if (isLocked.current) {
         targetEuler.current.y -= e.movementX * LOOK_SPEED
         targetEuler.current.x -= e.movementY * LOOK_SPEED
         targetEuler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetEuler.current.x))
+      } else if (isDragging.current) {
+        const dx = e.clientX - lastMousePos.current.x
+        const dy = e.clientY - lastMousePos.current.y
+
+        // Use touch look speed for drag as it's pixel based
+        targetEuler.current.y -= dx * TOUCH_LOOK_SPEED
+        targetEuler.current.x -= dy * TOUCH_LOOK_SPEED
+        targetEuler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetEuler.current.x))
+
+        lastMousePos.current.set(e.clientX, e.clientY)
+
+        if (Math.abs(e.clientX - dragStart.current.x) > 5 || Math.abs(e.clientY - dragStart.current.y) > 5) {
+          hasDragged.current = true
+        }
       }
     }
 
     const onClick = () => {
-      if (!document.pointerLockElement) {
+      if (!document.pointerLockElement && !hasDragged.current) {
         gl.domElement.requestPointerLock()
       }
     }
@@ -173,6 +204,8 @@ const CameraController = () => {
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('pointerlockchange', onPointerLockChange)
     gl.domElement.addEventListener('click', onClick)
+    gl.domElement.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('mouseup', onMouseUp)
     gl.domElement.addEventListener('touchstart', onTouchStart, { passive: false })
     gl.domElement.addEventListener('touchmove', onTouchMove, { passive: false })
     gl.domElement.addEventListener('touchend', onTouchEnd)
@@ -183,6 +216,8 @@ const CameraController = () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('pointerlockchange', onPointerLockChange)
       gl.domElement.removeEventListener('click', onClick)
+      gl.domElement.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('mouseup', onMouseUp)
       gl.domElement.removeEventListener('touchstart', onTouchStart)
       gl.domElement.removeEventListener('touchmove', onTouchMove)
       gl.domElement.removeEventListener('touchend', onTouchEnd)
