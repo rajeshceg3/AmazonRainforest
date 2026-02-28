@@ -424,6 +424,95 @@ class DistantThunderLayer {
 }
 
 
+// --- Zen Layer (Stillness Aura) ---
+class ZenLayer {
+    constructor(outputNode) {
+        this.output = outputNode
+
+        // Deep Warm Pad
+        this.padSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine" },
+            envelope: { attack: 5, decay: 5, sustain: 1.0, release: 10 }
+        }).connect(this.output)
+
+        // Shimmering Chorus
+        this.chorus = new Tone.Chorus(4, 2.5, 0.5).connect(this.output).start()
+        this.fmSynth = new Tone.FMSynth({
+            harmonicity: 3, modulationIndex: 10, oscillator: { type: "sine" },
+            envelope: { attack: 4, decay: 4, sustain: 0.5, release: 8 },
+            modulation: { type: "triangle" }
+        }).connect(this.chorus)
+
+        // Initial volumes very low
+        this.padSynth.volume.value = -100
+        this.fmSynth.volume.value = -100
+
+        // State
+        this.active = false
+        this.chords = [
+            ["C3", "E3", "G3", "B3"], // Cmaj7
+            ["F2", "A2", "C3", "E3"], // Fmaj7
+            ["A2", "C3", "E3", "G3"], // Amin7
+            ["G2", "B2", "D3", "F#3"] // Gmaj7
+        ]
+        this.currentChord = 0
+        this.lastPlayTime = 0
+    }
+
+    update(factor, time) {
+        if (factor > 0.1 && !this.active) {
+            this.active = true
+            // Start playing
+            this.lastPlayTime = time
+            this.padSynth.triggerAttack(this.chords[this.currentChord], time)
+            this.fmSynth.triggerAttackRelease("C5", "1m", time)
+        }
+
+        if (this.active) {
+            // Volume logic based on stillness factor (0.0 to 1.0)
+            let targetPadVol = THREE.MathUtils.lerp(-100, -20, factor)
+            let targetFmVol = THREE.MathUtils.lerp(-100, -25, factor)
+
+            if (Number.isFinite(targetPadVol) && !isNaN(targetPadVol) && targetPadVol > -Infinity && targetPadVol < Infinity) {
+                try {
+                    this.padSynth.volume.value = targetPadVol // Use value assignment instead of ramp to avoid WebAudio param state errors in Three.js loop
+                } catch(e) {}
+            }
+            if (Number.isFinite(targetFmVol) && !isNaN(targetFmVol) && targetFmVol > -Infinity && targetFmVol < Infinity) {
+                try {
+                    this.fmSynth.volume.value = targetFmVol
+                } catch(e) {}
+            }
+
+            // Chord progression every 8 seconds
+            if (time - this.lastPlayTime > 8) {
+                this.padSynth.triggerRelease(this.chords[this.currentChord], time)
+                this.currentChord = (this.currentChord + 1) % this.chords.length
+                this.padSynth.triggerAttack(this.chords[this.currentChord], time + 2)
+
+                // Occasional FM shimmer
+                if (Math.random() > 0.5) {
+                    const shimmerNote = ["E5", "G5", "B5"][Math.floor(Math.random() * 3)]
+                    this.fmSynth.triggerAttackRelease(shimmerNote, "2m", time + 1)
+                }
+
+                this.lastPlayTime = time
+            }
+
+            if (factor <= 0.05) {
+                this.active = false
+                this.padSynth.triggerRelease(this.chords[this.currentChord], time)
+                this.padSynth.volume.value = -100
+                this.fmSynth.volume.value = -100
+            }
+        }
+    }
+
+    dispose() {
+        this.padSynth.dispose(); this.fmSynth.dispose(); this.chorus.dispose()
+    }
+}
+
 // --- Hummingbird Layer (Background/Loop) ---
 class HummingbirdLayer {
     constructor(outputNode) {
@@ -489,6 +578,7 @@ export class SoundscapeManager {
     this.movement = new MovementLayer(this.masterComp)
     this.footsteps = new FootstepsLayer(this.masterComp)
     this.hummingbirds = new HummingbirdLayer(this.masterComp)
+    this.zen = new ZenLayer(this.masterComp) // New Zen Layer
     this.distantThunder = new DistantThunderLayer(this.reverb) // Connect directly to reverb for space
 
     this.thunderSynth = new Tone.NoiseSynth({ noise: { type: "pink" }, envelope: { attack: 0.05, decay: 2.5, sustain: 0 } }).connect(this.reverb)
@@ -503,7 +593,15 @@ export class SoundscapeManager {
     }).connect(this.reverb)
     this.splashFX.volume.value = -10
 
+    // Tracking Stillness
+    this.stillnessFactor = 0
+
     Tone.Transport.start()
+  }
+
+  setStillness(factor) {
+      // 0.0 to 1.0, where 1.0 is completely still and glowing
+      this.stillnessFactor = factor
   }
 
   update(pos, speed = 0) {
@@ -521,6 +619,9 @@ export class SoundscapeManager {
         this.deepAmbience.update(p, time); this.wind.update(p, time); this.movement.update(p, time, speed)
         this.footsteps.update(p, time); this.hummingbirds.update(p, time)
         this.distantThunder.update(p, time)
+
+        // Update Zen Layer with current stillness factor
+        this.zen.update(this.stillnessFactor, time)
     } catch (e) {
         // Prevent audio errors from crashing the visual loop
         if (!this.hasLoggedError) {
@@ -553,6 +654,7 @@ export class SoundscapeManager {
     this.insects.dispose(); this.creatures.dispose(); this.frogs.dispose(); this.howlers.dispose()
     this.ambience.dispose(); this.deepAmbience.dispose(); this.wind.dispose(); this.movement.dispose()
     this.footsteps.dispose(); this.hummingbirds.dispose(); this.distantThunder.dispose()
+    this.zen.dispose()
     this.thunderSynth.dispose(); this.thunderRumble.dispose(); this.splashFX.dispose()
     this.reverb.dispose(); this.masterComp.dispose(); this.masterEQ.dispose(); this.limiter.dispose()
     Tone.Transport.stop()

@@ -4,6 +4,7 @@ const quotes = [
   "Light filters through 390 billion leaves.",
   "Humidity hangs like breath.",
   "The forest does not perform, it breathes.",
+  "Stop moving, and the forest will speak.",
   "Silence is allowed."
 ]
 
