@@ -21,6 +21,7 @@ import FallingLeaves from './environment/FallingLeaves'
 import Mist from './environment/Mist'
 import PoisonDartFrog from './entities/PoisonDartFrog'
 import Hummingbird from './entities/Hummingbird'
+import StillnessAura from './environment/StillnessAura'
 
 const Scene = ({ audioStarted }) => {
   return (
@@ -90,6 +91,9 @@ const Scene = ({ audioStarted }) => {
       <Fireflies count={400} />
       <FallingLeaves count={300} />
       <Mist />
+
+      {/* Hidden Joyful Feature */}
+      <StillnessAura />
 
       {/* Fauna */}
       <PoisonDartFrog count={40} />
