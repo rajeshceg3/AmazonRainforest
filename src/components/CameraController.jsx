@@ -15,6 +15,10 @@ const INPUT_SMOOTHING = 8.0 // Lerp speed for input ramping
 const TOUCH_DEADZONE = 35
 const TOUCH_JOYSTICK_MAX_DIST = 50
 
+// Reusable objects for useFrame
+const _moveDir = new THREE.Vector3()
+const _euler = new THREE.Euler(0, 0, 0, 'YXZ')
+
 const CameraController = () => {
   const { camera, gl } = useThree()
 
@@ -271,9 +275,10 @@ const CameraController = () => {
     // Direction relative to camera yaw
     direction.current.set(0, 0, 0)
     if (Math.abs(currentInput.current.x) > 0.001 || Math.abs(currentInput.current.y) > 0.001) {
-        const moveDir = new THREE.Vector3(currentInput.current.x, 0, -currentInput.current.y)
-        moveDir.applyEuler(new THREE.Euler(0, euler.current.y, 0))
-        direction.current.copy(moveDir) // Do not normalize, keep magnitude for speed control!
+        _moveDir.set(currentInput.current.x, 0, -currentInput.current.y)
+        _euler.set(0, euler.current.y, 0)
+        _moveDir.applyEuler(_euler)
+        direction.current.copy(_moveDir) // Do not normalize, keep magnitude for speed control!
     }
 
     // 3. Physics & Velocity

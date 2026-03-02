@@ -211,7 +211,6 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
             // OrganicMesh goes +Y.
             // So rotate Tail Mesh by PI around X? (Flip Y).
             // Yes.
-            rotation={[Math.PI, 0, 0]}
             castShadow receiveShadow
         >
             {furMaterial}

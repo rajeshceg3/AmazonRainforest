@@ -5,6 +5,10 @@ import { DolphinSkinMaterial } from '../shaders/DolphinSkinMaterial'
 import { pseudoNoise } from '../../utils/OrganicMath'
 import OrganicMesh from './OrganicMesh'
 
+const _targetPos = new THREE.Vector3()
+const _dir = new THREE.Vector3()
+const _lookTarget = new THREE.Vector3()
+
 const PinkDolphin = ({ position = [0, -2, 0] }) => {
   const group = useRef()
   const bodyRef = useRef()
@@ -55,14 +59,14 @@ const PinkDolphin = ({ position = [0, -2, 0] }) => {
         const y = position[1] + Math.sin(t * 0.8) * 0.3 + pseudoNoise(t * 0.5, 99) * 0.5
 
         const currentPos = group.current.position
-        const targetPos = new THREE.Vector3(x, y, z)
-        const dir = targetPos.clone().sub(currentPos).normalize()
+        _targetPos.set(x, y, z)
+        _dir.subVectors(_targetPos, currentPos).normalize()
 
-        group.current.position.copy(targetPos)
+        group.current.position.copy(_targetPos)
 
         // Look At
-        const lookTarget = currentPos.clone().add(dir)
-        group.current.lookAt(lookTarget)
+        _lookTarget.addVectors(currentPos, _dir)
+        group.current.lookAt(_lookTarget)
 
         // Banking
         const roll = pseudoNoise(t * 0.5, 20) * 0.8
