@@ -89,6 +89,11 @@ const HummingbirdModel = () => {
     )
 }
 
+const _targetPos = new THREE.Vector3()
+const _dir = new THREE.Vector3()
+const _lookTarget = new THREE.Vector3()
+const _velocityDelta = new THREE.Vector3()
+
 const Hummingbird = ({ position = [0, 5, 0] }) => {
   const ref = useRef()
   // State: Hovering or Darting
@@ -136,25 +141,27 @@ const Hummingbird = ({ position = [0, 5, 0] }) => {
 
       // Movement
       const currentPos = ref.current.position
-      const dir = new THREE.Vector3().subVectors(target.current, currentPos)
-      const dist = dir.length()
+      _dir.subVectors(target.current, currentPos)
+      const dist = _dir.length()
 
       if (dist > 0.1) {
-          dir.normalize()
+          _dir.normalize()
           const speed = state.current.mode === 'dart' ? 12.0 : 2.0 // Fast dart, slow adjustment
 
           // Smooth acceleration
-          velocity.current.lerp(dir.multiplyScalar(speed), 5.0 * delta)
+          velocity.current.lerp(_dir.multiplyScalar(speed), 5.0 * delta)
       } else {
-          velocity.current.lerp(new THREE.Vector3(0,0,0), 5.0 * delta)
+          _targetPos.set(0, 0, 0)
+          velocity.current.lerp(_targetPos, 5.0 * delta)
       }
 
-      ref.current.position.add(velocity.current.clone().multiplyScalar(delta))
+      _velocityDelta.copy(velocity.current).multiplyScalar(delta)
+      ref.current.position.add(_velocityDelta)
 
       // Look direction
       if (velocity.current.length() > 0.1) {
-          const lookTarget = currentPos.clone().add(velocity.current)
-          ref.current.lookAt(lookTarget)
+          _lookTarget.addVectors(currentPos, velocity.current)
+          ref.current.lookAt(_lookTarget)
       }
 
       // Bobbing while hovering

@@ -5,6 +5,8 @@ import { FeatherMaterial } from '../shaders/FeatherMaterial'
 import { FurMaterial } from '../shaders/FurMaterial'
 import OrganicMesh from './OrganicMesh'
 
+const _targetPos = new THREE.Vector3()
+
 const Macaw = ({ position = [0, 15, 0] }) => {
   const group = useRef()
   const bodyRef = useRef()
@@ -79,10 +81,10 @@ const Macaw = ({ position = [0, 15, 0] }) => {
         const nextZ = position[2] + Math.cos((t + 0.1) * 0.3) * 8
         const nextY = position[1] + Math.cos((t + 0.1) * 0.8) * 2
 
-        const targetPos = new THREE.Vector3(nextX, nextY, nextZ)
+        _targetPos.set(nextX, nextY, nextZ)
 
         group.current.position.set(x, y, z)
-        group.current.lookAt(targetPos)
+        group.current.lookAt(_targetPos)
 
         // Banking
         const dx = nextX - x

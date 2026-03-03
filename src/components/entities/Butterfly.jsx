@@ -214,6 +214,11 @@ const ButterflyMaterial = ({ uColor1, uColor2, uFlapSpeed, uFlapStrength, ...pro
     )
 }
 
+// Reusable objects for useFrame
+const _targetPos = new THREE.Vector3()
+const _lookTarget = new THREE.Vector3()
+const _velocity = new THREE.Vector3()
+
 const Butterfly = ({ position = [0, 0, 0] }) => {
   const group = useRef()
   const wingGeo = useButterflyWingGeometry()
@@ -257,13 +262,13 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
         const x = position[0] + Math.sin(t * speed) * radius + Math.sin(t * speed * 2.1) * 1.5 + wanderX
         const y = position[1] + Math.cos(t * speed * 0.7) * 1.5 + Math.sin(t * speed * 1.3) * 0.8 + wanderY
         const z = position[2] + Math.cos(t * speed * 1.1) * radius * 0.8 + wanderZ
-        const targetPos = new THREE.Vector3(x, y, z)
+        _targetPos.set(x, y, z)
         const currentPos = group.current.position
-        const velocity = targetPos.clone().sub(currentPos)
-        group.current.position.copy(targetPos)
-        if (velocity.lengthSq() > 0.0001) {
-            const lookTarget = currentPos.clone().sub(velocity)
-            group.current.lookAt(lookTarget)
+        _velocity.subVectors(_targetPos, currentPos)
+        group.current.position.copy(_targetPos)
+        if (_velocity.lengthSq() > 0.0001) {
+            _lookTarget.subVectors(currentPos, _velocity)
+            group.current.lookAt(_lookTarget)
             group.current.rotation.z += pseudoNoise(t, offset) * 0.5
         }
     }
