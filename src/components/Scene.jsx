@@ -1,7 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, Sparkles, Cloud, SpotLight } from '@react-three/drei'
-import { EffectComposer, Bloom, DepthOfField, Vignette, Noise } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, Noise } from '@react-three/postprocessing'
 import CameraController from './CameraController'
+import DynamicDepthOfField from './DynamicDepthOfField'
 import AudioController from './Audio/AudioController'
 import ForestFloor from './environment/ForestFloor'
 import Canopy from './environment/Canopy'
@@ -19,6 +20,7 @@ import Fireflies from './environment/Fireflies'
 import Lightning from './environment/Lightning'
 import FallingLeaves from './environment/FallingLeaves'
 import Mist from './environment/Mist'
+import OrganicGuideParticles from './environment/OrganicGuideParticles'
 import PoisonDartFrog from './entities/PoisonDartFrog'
 import Hummingbird from './entities/Hummingbird'
 import StillnessAura from './environment/StillnessAura'
@@ -72,8 +74,8 @@ const Scene = ({ audioStarted }) => {
       <Cloud opacity={0.6} speed={0.15} width={60} depth={5} segments={20} position={[0, 25, -40]} color="#c0d0c0" />
       <Cloud opacity={0.5} speed={0.08} width={80} depth={10} segments={15} position={[40, 30, 20]} color="#c0d0c0" />
 
-      {/* Floating Particles (Pollen/Spores) */}
-      <Sparkles count={4000} scale={[400, 50, 400]} size={1.5} speed={0.5} opacity={0.2} color="#ccffcc" />
+      {/* Floating Particles (Pollen/Spores) gently guiding towards river */}
+      <OrganicGuideParticles count={4000} />
 
       {/* Controlled Lightning - Very rare */}
       <Lightning />
@@ -121,7 +123,7 @@ const Scene = ({ audioStarted }) => {
       />
 
       <EffectComposer disableNormalPass>
-        <DepthOfField focusDistance={0.01} focalLength={0.02} bokehScale={1.5} height={480} />
+        <DynamicDepthOfField />
         <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.8} height={300} intensity={0.9} />
         <Noise opacity={0.03} />
         <Vignette eskil={false} offset={0.1} darkness={0.6} />

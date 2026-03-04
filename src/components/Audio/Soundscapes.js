@@ -338,15 +338,30 @@ class MovementLayer {
         this.filter = new Tone.Filter(600, "lowpass").connect(this.output)
         this.noise = new Tone.Noise("pink").connect(this.filter)
         this.noise.volume.value = -100; this.noise.start()
+
+        // Brush rustle
+        this.brushFilter = new Tone.AutoFilter({ frequency: 5, baseFrequency: 1000, octaves: 2, depth: 0.6 }).connect(this.output).start()
+        this.brushNoise = new Tone.Noise("brown").connect(this.brushFilter)
+        this.brushNoise.volume.value = -100; this.brushNoise.start()
     }
-    update(pos, time, speed) {
+    update(pos, time, speed, inBrush = false) {
         if (speed > 0.2) {
              const targetVol = THREE.MathUtils.mapLinear(Math.min(speed, 10), 0, 10, -60, -25)
              this.noise.volume.rampTo(targetVol, 0.1)
              this.filter.frequency.rampTo(600 + speed * 50, 0.1)
-        } else { this.noise.volume.rampTo(-100, 0.2) }
+
+             if (inBrush) {
+                 const brushVol = THREE.MathUtils.mapLinear(Math.min(speed, 10), 0, 10, -40, -15)
+                 this.brushNoise.volume.rampTo(brushVol, 0.1)
+             } else {
+                 this.brushNoise.volume.rampTo(-100, 0.3)
+             }
+        } else {
+            this.noise.volume.rampTo(-100, 0.2)
+            this.brushNoise.volume.rampTo(-100, 0.2)
+        }
     }
-    dispose() { this.noise.dispose(); this.filter.dispose() }
+    dispose() { this.noise.dispose(); this.filter.dispose(); this.brushNoise.dispose(); this.brushFilter.dispose(); }
 }
 class FootstepsLayer {
     constructor(outputNode) {
@@ -604,7 +619,7 @@ export class SoundscapeManager {
       this.stillnessFactor = factor
   }
 
-  update(pos, speed = 0) {
+  update(pos, speed = 0, inBrush = false) {
     const p = (typeof pos === 'number') ? new THREE.Vector3(0, pos, 0) : pos
 
     // Safety check for NaN positions which cause AudioParam errors
@@ -616,7 +631,7 @@ export class SoundscapeManager {
         this.river.update(p, time); this.canopy.update(p, time); this.wood.update(p, time)
         this.rain.update(p, time); this.insects.update(p, time); this.creatures.update(p, time)
         this.frogs.update(p, time); this.howlers.update(p, time); this.ambience.update(p, time)
-        this.deepAmbience.update(p, time); this.wind.update(p, time); this.movement.update(p, time, speed)
+        this.deepAmbience.update(p, time); this.wind.update(p, time); this.movement.update(p, time, speed, inBrush)
         this.footsteps.update(p, time); this.hummingbirds.update(p, time)
         this.distantThunder.update(p, time)
 

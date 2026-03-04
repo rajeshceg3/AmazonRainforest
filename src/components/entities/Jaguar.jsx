@@ -1,9 +1,10 @@
-import React, { useRef, useMemo, useEffect } from 'react'
+import React, { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { JaguarFurMaterial } from '../shaders/JaguarFurMaterial'
 import { pseudoNoise, mix } from '../../utils/OrganicMath'
 import OrganicMesh from './OrganicMesh'
+import DiscoveryText from '../UI/DiscoveryText'
 
 const Jaguar = ({ position = [0, 0, 0] }) => {
   const group = useRef()
@@ -153,6 +154,23 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
     }
   })
 
+  // Discovery UI State
+  const [isHovered, setIsHovered] = useState(false)
+  const [showText, setShowText] = useState(false)
+  const hoverTimer = useRef(null)
+
+  useEffect(() => {
+    if (isHovered) {
+      hoverTimer.current = setTimeout(() => {
+        setShowText(true)
+      }, 2000) // 2 seconds of focus required
+    } else {
+      clearTimeout(hoverTimer.current)
+      setShowText(false)
+    }
+    return () => clearTimeout(hoverTimer.current)
+  }, [isHovered])
+
   // Attachments
   // Use `useEffect` to attach Tail and Legs to Body Bones
   useEffect(() => {
@@ -176,7 +194,20 @@ const Jaguar = ({ position = [0, 0, 0] }) => {
   }, [])
 
   return (
-    <group ref={group} position={position}>
+    <group
+      ref={group}
+      position={position}
+      onPointerOver={(e) => { e.stopPropagation(); setIsHovered(true) }}
+      onPointerOut={() => setIsHovered(false)}
+    >
+        <group position={[0, 1.5, 0]}>
+          <DiscoveryText
+            text="Panthera onca"
+            subtext="Apex predator of the Amazon"
+            show={showText}
+          />
+        </group>
+
         {/* BODY (Hips to Head) - Points Forward (-Z) */}
         <OrganicMesh
             ref={bodyRef}

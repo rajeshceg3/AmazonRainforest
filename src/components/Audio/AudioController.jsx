@@ -41,7 +41,12 @@ const AudioController = ({ started }) => {
       // Filter out large jumps (teleportation) or first frame
       const speed = (dist < 50) ? dist / Math.max(delta, 0.001) : 0
 
-      managerRef.current.update(currentPos, speed)
+      // Simulate brush proximity (e.g. low to ground in the forest)
+      // If Y is near the ground level (terrain is undulating but mostly near 0)
+      // and not near the river path (X near 0)
+      const inBrush = currentPos.y < 2.5 && Math.abs(currentPos.x) > 15;
+
+      managerRef.current.update(currentPos, speed, inBrush)
 
       // Splash Logic: Water level approx 0.8
       const waterLevel = 0.8

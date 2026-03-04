@@ -1,9 +1,10 @@
-import React, { useRef, useMemo, useEffect } from 'react'
+import React, { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { FeatherMaterial } from '../shaders/FeatherMaterial'
 import { FurMaterial } from '../shaders/FurMaterial'
 import OrganicMesh from './OrganicMesh'
+import DiscoveryText from '../UI/DiscoveryText'
 
 const _targetPos = new THREE.Vector3()
 
@@ -126,6 +127,23 @@ const Macaw = ({ position = [0, 15, 0] }) => {
     }
   })
 
+  // Discovery UI State
+  const [isHovered, setIsHovered] = useState(false)
+  const [showText, setShowText] = useState(false)
+  const hoverTimer = useRef(null)
+
+  useEffect(() => {
+    if (isHovered) {
+      hoverTimer.current = setTimeout(() => {
+        setShowText(true)
+      }, 2000) // 2 seconds of focus required
+    } else {
+      clearTimeout(hoverTimer.current)
+      setShowText(false)
+    }
+    return () => clearTimeout(hoverTimer.current)
+  }, [isHovered])
+
   // Attachments
   useEffect(() => {
      if (bodyRef.current && bodyRef.current.bones) {
@@ -146,7 +164,21 @@ const Macaw = ({ position = [0, 15, 0] }) => {
   }, [])
 
   return (
-    <group ref={group} position={position} scale={0.5}>
+    <group
+      ref={group}
+      position={position}
+      scale={0.5}
+      onPointerOver={(e) => { e.stopPropagation(); setIsHovered(true) }}
+      onPointerOut={() => setIsHovered(false)}
+    >
+      <group position={[0, 1.5, 0]}>
+        <DiscoveryText
+          text="Ara macao"
+          subtext="Scarlet Macaw"
+          show={showText}
+        />
+      </group>
+
       {/* Body: Base=Hips (Back), Top=Head (Front) */}
       <OrganicMesh
           ref={bodyRef}
