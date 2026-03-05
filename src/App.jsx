@@ -8,9 +8,9 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-[#051605]">
-      {!audioStarted && <StartScreen onStart={() => setAudioStarted(true)} />}
       <Scene audioStarted={audioStarted} />
       {audioStarted && <Overlay />}
+      <StartScreen onStart={() => setAudioStarted(true)} />
     </div>
   )
 }
