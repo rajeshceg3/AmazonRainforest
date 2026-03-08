@@ -8,7 +8,7 @@ def verify_scene():
         page.on("console", lambda msg: print(f"CONSOLE: {msg.text}"))
         page.on("pageerror", lambda err: print(f"PAGE ERROR: {err}"))
 
-        page.goto("http://localhost:5173")
+        page.goto("http://localhost:5175")
 
         try:
             button = page.get_by_text("ENTER EXPERIENCE")
