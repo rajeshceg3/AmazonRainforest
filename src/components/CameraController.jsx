@@ -55,6 +55,9 @@ const CameraController = () => {
   const bobPhase = useRef(0)
   const currentRoll = useRef(0)
 
+  // Track if user has moved yet
+  const hasDispatchedMove = useRef(false)
+
   // Initialize camera rotation from current camera
   useEffect(() => {
     euler.current.setFromQuaternion(camera.quaternion)
@@ -279,6 +282,12 @@ const CameraController = () => {
         _euler.set(0, euler.current.y, 0)
         _moveDir.applyEuler(_euler)
         direction.current.copy(_moveDir) // Do not normalize, keep magnitude for speed control!
+
+        // Dispatch event on first real movement to hide hints
+        if (!hasDispatchedMove.current) {
+            hasDispatchedMove.current = true
+            window.dispatchEvent(new CustomEvent('userMoved'))
+        }
     }
 
     // 3. Physics & Velocity

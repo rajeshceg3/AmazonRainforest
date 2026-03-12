@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import * as Tone from 'tone'
 
 const StartScreen = ({ onStart }) => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+
+  // Hold-to-enter states
+  const [isHolding, setIsHolding] = useState(false)
+  const [holdProgress, setHoldProgress] = useState(0)
+  const holdFrameRef = useRef()
 
   useEffect(() => {
     // Trigger initial fade in slightly after mount for a deliberate, slow entrance
@@ -15,6 +20,7 @@ const StartScreen = ({ onStart }) => {
   }, [])
 
   const handleStart = async () => {
+    if (isTransitioning) return
     setIsTransitioning(true)
 
     try {
@@ -35,6 +41,45 @@ const StartScreen = ({ onStart }) => {
       setIsHidden(true)
     }, 4000)
   }
+
+  // Handle Hold Interaction
+  const startHold = () => {
+    setIsHolding(true)
+  }
+
+  const endHold = () => {
+    setIsHolding(false)
+  }
+
+  useEffect(() => {
+    if (isHolding) {
+      const updateProgress = () => {
+        setHoldProgress(prev => {
+          const next = prev + 1.5 // Speed of holding
+          if (next >= 100) {
+            handleStart()
+            return 100
+          }
+          return next
+        })
+        holdFrameRef.current = requestAnimationFrame(updateProgress)
+      }
+      holdFrameRef.current = requestAnimationFrame(updateProgress)
+    } else {
+      // Smooth decay when released
+      const decayProgress = () => {
+        setHoldProgress(prev => {
+          if (prev <= 0) return 0
+          const next = prev - 3 // decay speed
+          holdFrameRef.current = requestAnimationFrame(decayProgress)
+          return next
+        })
+      }
+      holdFrameRef.current = requestAnimationFrame(decayProgress)
+    }
+
+    return () => cancelAnimationFrame(holdFrameRef.current)
+  }, [isHolding])
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
@@ -106,36 +151,68 @@ const StartScreen = ({ onStart }) => {
           }`}
         />
 
-        <p
-          className={`max-w-md mb-16 text-sm sm:text-base font-sans leading-relaxed tracking-[0.05em] text-white/40 font-light transition-all duration-[3000ms] ease-[cubic-bezier(0.25,1,0.5,1)] delay-[1200ms] transform ${
-            isMounted && !isTransitioning ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 translate-y-8 blur-sm'
-          }`}
-        >
-          An immersive experience designed for presence, not performance. Move slowly.
-        </p>
+        <div className="max-w-md mb-16 relative h-20 flex justify-center items-center">
+          <p
+            className={`absolute text-sm sm:text-base font-sans leading-relaxed tracking-[0.05em] text-white/40 font-light transition-all duration-[2000ms] ease-[cubic-bezier(0.25,1,0.5,1)] transform ${
+              isMounted && !isTransitioning && holdProgress < 30 ? 'opacity-100 translate-y-0 blur-none delay-[1200ms]' : 'opacity-0 -translate-y-4 blur-sm'
+            }`}
+          >
+            You are entering a sanctuary.
+          </p>
+          <p
+            className={`absolute text-sm sm:text-base font-sans leading-relaxed tracking-[0.05em] text-white/40 font-light transition-all duration-[2000ms] ease-[cubic-bezier(0.25,1,0.5,1)] transform ${
+              isMounted && !isTransitioning && holdProgress >= 30 && holdProgress < 70 ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 translate-y-4 blur-sm'
+            }`}
+          >
+            Move slowly.
+          </p>
+          <p
+            className={`absolute text-sm sm:text-base font-sans leading-relaxed tracking-[0.05em] text-white/50 font-light transition-all duration-[2000ms] ease-[cubic-bezier(0.25,1,0.5,1)] transform ${
+              isMounted && !isTransitioning && holdProgress >= 70 ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 translate-y-4 blur-sm'
+            }`}
+          >
+            Hold to breathe.
+          </p>
+        </div>
 
-        <button
-          onClick={handleStart}
-          className={`group relative overflow-hidden px-12 py-5 bg-transparent transition-all duration-[3000ms] ease-out delay-[1500ms] transform text-xs sm:text-sm tracking-[0.4em] uppercase cursor-pointer ${
-            isMounted && !isTransitioning ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        <div
+          onMouseDown={startHold}
+          onMouseUp={endHold}
+          onMouseLeave={endHold}
+          onTouchStart={startHold}
+          onTouchEnd={endHold}
+          className={`group relative flex items-center justify-center w-48 h-48 transition-all duration-[3000ms] ease-out delay-[1500ms] transform cursor-pointer ${
+            isMounted && !isTransitioning ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-8 scale-90'
           }`}
+          style={{ transform: isHolding ? 'scale(0.95)' : 'scale(1)' }}
         >
-          {/* Animated border drawing lines */}
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-white/20 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]" />
-          <div className="absolute bottom-0 right-0 w-full h-[1px] bg-white/20 scale-x-0 group-hover:scale-x-100 origin-right transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]" />
-          <div className="absolute top-0 right-0 w-[1px] h-full bg-white/20 scale-y-0 group-hover:scale-y-100 origin-top transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] delay-100" />
-          <div className="absolute bottom-0 left-0 w-[1px] h-full bg-white/20 scale-y-0 group-hover:scale-y-100 origin-bottom transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] delay-100" />
-
-          {/* Static subtle border */}
-          <div className="absolute inset-0 border border-white/5" />
+          {/* SVG Progress Ring */}
+          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
+            <circle
+              cx="96" cy="96" r="88"
+              fill="transparent"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="1"
+            />
+            <circle
+              cx="96" cy="96" r="88"
+              fill="transparent"
+              stroke="rgba(255,255,255,0.6)"
+              strokeWidth="2"
+              strokeDasharray="552.92" // 2 * pi * 88
+              strokeDashoffset={552.92 - (552.92 * holdProgress) / 100}
+              className="transition-all duration-75 ease-linear"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.4))' }}
+            />
+          </svg>
 
           {/* Hover background pulse */}
-          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-in-out" />
+          <div className={`absolute inset-0 bg-white/5 rounded-full transition-opacity duration-1000 ease-in-out ${isHolding ? 'opacity-100 scale-90' : 'opacity-0 group-hover:opacity-100 scale-100'}`} />
 
-          <span className="relative z-10 text-white/60 group-hover:text-white transition-colors duration-700 drop-shadow-md">
-            Enter Experience
+          <span className={`relative z-10 text-xs sm:text-sm tracking-[0.4em] uppercase transition-colors duration-700 drop-shadow-md ${isHolding ? 'text-white' : 'text-white/40 group-hover:text-white/80'}`}>
+            Hold
           </span>
-        </button>
+        </div>
       </div>
     </div>
   )
