@@ -144,6 +144,9 @@ const StillnessAura = () => {
         if (window.soundscapeManager && window.soundscapeManager.setStillness) {
             window.soundscapeManager.setStillness(activeStillness.current)
         }
+
+        // Dispatch UI event for Overlay
+        window.dispatchEvent(new CustomEvent('stillnessUpdate', { detail: activeStillness.current }))
     })
 
     return (

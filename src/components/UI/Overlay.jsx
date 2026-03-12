@@ -12,37 +12,50 @@ const Overlay = () => {
   const [quoteIndex, setQuoteIndex] = useState(0)
   const [visible, setVisible] = useState(false)
   const [showHint, setShowHint] = useState(false)
+  const [hasMoved, setHasMoved] = useState(false)
+  const [stillness, setStillness] = useState(0)
 
   useEffect(() => {
-    // Initial delays to let user land in the scene before showing text
-    const initQuoteTimer = setTimeout(() => {
-      setVisible(true)
-    }, 4000)
-
+    // Initial delays to let user land in the scene before showing hints
     const initHintTimer = setTimeout(() => {
-      setShowHint(true)
+      if (!hasMoved) setShowHint(true)
     }, 6000)
 
-    const interval = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setQuoteIndex((prev) => (prev + 1) % quotes.length)
-        setVisible(true)
-      }, 3000) // Longer pause between quotes for a calmer pace
-    }, 15000) // Keep quotes on screen longer (15s instead of 10s)
+    return () => clearTimeout(initHintTimer)
+  }, [hasMoved])
 
-    // Hint fade out timer
-    const hintOutTimer = setTimeout(() => {
+  // Listen for user movement to hide hints permanently
+  useEffect(() => {
+    const handleUserMoved = () => {
+      setHasMoved(true)
       setShowHint(false)
-    }, 14000) // Hide hints after 8 seconds of visibility
-
-    return () => {
-      clearInterval(interval)
-      clearTimeout(initQuoteTimer)
-      clearTimeout(initHintTimer)
-      clearTimeout(hintOutTimer)
     }
+    window.addEventListener('userMoved', handleUserMoved)
+    return () => window.removeEventListener('userMoved', handleUserMoved)
   }, [])
+
+  // Listen for stillness to show quotes
+  useEffect(() => {
+    const handleStillness = (e) => {
+      const currentStillness = e.detail
+      setStillness(currentStillness)
+
+      // If fully still, show quote
+      if (currentStillness > 0.8 && !visible) {
+        setVisible(true)
+      }
+      // If moving, hide quote and prep next one
+      else if (currentStillness < 0.2 && visible) {
+        setVisible(false)
+        setTimeout(() => {
+          setQuoteIndex((prev) => (prev + 1) % quotes.length)
+        }, 3000) // Wait for fade out before changing text
+      }
+    }
+
+    window.addEventListener('stillnessUpdate', handleStillness)
+    return () => window.removeEventListener('stillnessUpdate', handleStillness)
+  }, [visible])
 
   return (
     <div className="fixed inset-0 pointer-events-none flex flex-col items-center justify-between py-12 z-40">
