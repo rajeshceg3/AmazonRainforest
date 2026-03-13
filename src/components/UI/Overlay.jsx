@@ -68,9 +68,9 @@ const Overlay = () => {
 
       {/* Elegant Interaction Hint - Moved to Top */}
       <div
-        className={`relative flex flex-col items-center gap-4 transition-all duration-[4000ms] ease-[cubic-bezier(0.25,1,0.5,1)] transform ${showHint ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 -translate-y-4 blur-sm'}`}
+        className={`relative flex flex-col items-center gap-4 transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] transform ${showHint ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 -translate-y-8 blur-lg'}`}
       >
-        <div className="text-[9px] sm:text-[10px] font-sans tracking-[0.4em] text-white/30 uppercase flex items-center gap-4">
+        <div className="text-[9px] sm:text-[10px] font-sans tracking-[0.4em] text-white/30 uppercase flex items-center gap-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]">
           <span className="hidden sm:inline">Left Click <span className="text-white/20 px-2">+</span> Drag to Look</span>
           <span className="hidden sm:inline w-1 h-1 rounded-full bg-white/20" />
           <span className="hidden sm:inline">WASD to Move</span>
@@ -84,9 +84,9 @@ const Overlay = () => {
       {/* Main Quote - Kept at Bottom but refined */}
       <div className="flex-1 flex items-end justify-center mb-8">
         <div
-          className={`relative text-center px-4 transition-all duration-[4000ms] ease-[cubic-bezier(0.25,1,0.5,1)] transform ${visible ? 'opacity-100 translate-y-0 scale-100 blur-none' : 'opacity-0 translate-y-8 scale-105 blur-md'}`}
+          className={`relative text-center px-4 transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] transform ${visible ? 'opacity-100 translate-y-0 scale-100 blur-none' : 'opacity-0 translate-y-12 scale-105 blur-xl'}`}
         >
-          <div className="font-serif tracking-[0.25em] sm:tracking-[0.3em] text-white/80 uppercase text-xs sm:text-sm md:text-base drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] mix-blend-screen leading-loose">
+          <div className="font-serif tracking-[0.25em] sm:tracking-[0.3em] text-white/80 uppercase text-xs sm:text-sm md:text-base drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] mix-blend-screen leading-loose">
             {quotes[quoteIndex]}
           </div>
 

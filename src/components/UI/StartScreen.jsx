@@ -196,20 +196,26 @@ const StartScreen = ({ onStart }) => {
             />
             <circle
               cx="96" cy="96" r="88"
-              fill="transparent"
-              stroke="rgba(255,255,255,0.6)"
-              strokeWidth="2"
-              strokeDasharray="552.92" // 2 * pi * 88
-              strokeDashoffset={552.92 - (552.92 * holdProgress) / 100}
-              className="transition-all duration-75 ease-linear"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.4))' }}
+              fill="rgba(255,255,255,0.05)"
+              className="transition-all duration-300 ease-out origin-center"
+              style={{
+                transform: `scale(${1 + holdProgress / 100})`,
+                opacity: 1 - holdProgress / 100,
+                filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.8))'
+              }}
             />
           </svg>
 
           {/* Hover background pulse */}
-          <div className={`absolute inset-0 bg-white/5 rounded-full transition-opacity duration-1000 ease-in-out ${isHolding ? 'opacity-100 scale-90' : 'opacity-0 group-hover:opacity-100 scale-100'}`} />
+          <div
+            className={`absolute inset-0 bg-white/5 rounded-full transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] ${isHolding ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            style={{
+              transform: `scale(${isHolding ? 1 + (holdProgress / 50) : 1})`,
+              boxShadow: isHolding ? `0 0 ${holdProgress}px rgba(255,255,255,0.4)` : 'none'
+            }}
+          />
 
-          <span className={`relative z-10 text-xs sm:text-sm tracking-[0.4em] uppercase transition-colors duration-700 drop-shadow-md ${isHolding ? 'text-white' : 'text-white/40 group-hover:text-white/80'}`}>
+          <span className={`relative z-10 text-xs sm:text-sm uppercase transition-all duration-700 drop-shadow-md ${isHolding ? 'text-white tracking-[0.6em]' : 'text-white/40 tracking-[0.4em] group-hover:tracking-[0.5em] group-hover:text-white/80'}`}>
             Hold
           </span>
         </div>

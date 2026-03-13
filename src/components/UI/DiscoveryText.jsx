@@ -24,7 +24,7 @@ const DiscoveryText = ({ text, subtext, show }) => {
 
         {/* Subtle reticle dot at the base */}
         <div
-          className={`w-1 h-1 rounded-full bg-white/40 mb-1 transition-all duration-[1000ms] ease-out delay-200 ${
+          className={`w-2 h-2 animate-pulse shadow-[0_0_8px_rgba(255,255,255,0.8)] rounded-full bg-white/40 mb-1 transition-all duration-[1000ms] ease-out delay-200 ${
             show ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
           }`}
         />
@@ -39,6 +39,7 @@ const DiscoveryText = ({ text, subtext, show }) => {
                strokeWidth="1"
                strokeDasharray="100"
                strokeDashoffset={show ? "0" : "100"}
+               filter="drop-shadow(0 0 8px rgba(255,255,255,0.6))"
                className="transition-all duration-[1500ms] ease-[cubic-bezier(0.25,1,0.5,1)] delay-400"
              />
              <defs>
