@@ -186,36 +186,39 @@ const StartScreen = ({ onStart }) => {
           }`}
           style={{ transform: isHolding ? 'scale(0.95)' : 'scale(1)' }}
         >
-          {/* SVG Progress Ring */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none">
-            <circle
-              cx="96" cy="96" r="88"
-              fill="transparent"
-              stroke="rgba(255,255,255,0.1)"
-              strokeWidth="1"
-            />
-            <circle
-              cx="96" cy="96" r="88"
-              fill="rgba(255,255,255,0.05)"
-              className="transition-all duration-300 ease-out origin-center"
+          {/* Breathing Aura Rings */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            {/* Inner Ring */}
+            <div
+              className={`absolute w-full h-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] backdrop-blur-sm ${isHolding ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
               style={{
-                transform: `scale(${1 + holdProgress / 100})`,
-                opacity: 1 - holdProgress / 100,
-                filter: 'drop-shadow(0 0 12px rgba(255,255,255,0.8))'
+                transform: `scale(${1 + holdProgress / 40})`,
+                opacity: 1 - (holdProgress / 100),
+                boxShadow: isHolding ? `0 0 ${20 + holdProgress}px rgba(255,255,255,0.4), inset 0 0 ${10 + holdProgress / 2}px rgba(255,255,255,0.2)` : '0 0 15px rgba(255,255,255,0.1)',
+                backgroundColor: 'rgba(255,255,255,0.02)'
               }}
             />
-          </svg>
+            {/* Outer Ring */}
+            <div
+              className={`absolute w-full h-full rounded-full transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)] ${isHolding ? 'opacity-100' : 'opacity-0'}`}
+              style={{
+                transform: `scale(${1 + Math.pow(holdProgress / 100, 2) * 2.5})`,
+                opacity: 1 - (holdProgress / 100),
+                boxShadow: isHolding ? `0 0 ${40 + holdProgress * 2}px rgba(255,255,255,0.3)` : 'none'
+              }}
+            />
+          </div>
 
           {/* Hover background pulse */}
           <div
             className={`absolute inset-0 bg-white/5 rounded-full transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)] ${isHolding ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             style={{
-              transform: `scale(${isHolding ? 1 + (holdProgress / 50) : 1})`,
-              boxShadow: isHolding ? `0 0 ${holdProgress}px rgba(255,255,255,0.4)` : 'none'
+              transform: `scale(${isHolding ? 0.9 : 1})`,
+              boxShadow: 'inset 0 0 20px rgba(255,255,255,0.1)'
             }}
           />
 
-          <span className={`relative z-10 text-xs sm:text-sm uppercase transition-all duration-700 drop-shadow-md ${isHolding ? 'text-white tracking-[0.6em]' : 'text-white/40 tracking-[0.4em] group-hover:tracking-[0.5em] group-hover:text-white/80'}`}>
+          <span className={`relative z-10 text-xs sm:text-sm uppercase transition-all duration-700 drop-shadow-md ${isHolding ? 'text-white tracking-[0.6em]' : 'text-white/40 tracking-[0.3em] group-hover:tracking-[0.5em] group-hover:text-white/80'}`}>
             Hold
           </span>
         </div>

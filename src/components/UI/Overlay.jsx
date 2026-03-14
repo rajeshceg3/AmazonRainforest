@@ -81,20 +81,20 @@ const Overlay = () => {
         <div className={`h-px bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-[4000ms] ease-out ${showHint ? 'w-48 opacity-100' : 'w-0 opacity-0'}`}></div>
       </div>
 
-      {/* Main Quote - Kept at Bottom but refined */}
+      {/* Main Quote - Emerges like mist */}
       <div className="flex-1 flex items-end justify-center mb-8">
         <div
-          className={`relative text-center px-4 transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] transform ${visible ? 'opacity-100 translate-y-0 scale-100 blur-none' : 'opacity-0 translate-y-12 scale-105 blur-xl'}`}
+          className={`relative text-center px-4 transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] transform ${visible ? 'opacity-100 translate-y-0 scale-100 blur-none' : 'opacity-0 translate-y-24 scale-110 blur-xl'}`}
         >
-          <div className="font-serif tracking-[0.25em] sm:tracking-[0.3em] text-white/80 uppercase text-xs sm:text-sm md:text-base drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] mix-blend-screen leading-loose">
+          <div className={`font-serif tracking-[0.25em] sm:tracking-[0.3em] text-white/80 uppercase text-xs sm:text-sm md:text-base drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] mix-blend-screen leading-loose transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${visible ? 'opacity-100' : 'opacity-0'}`}>
             {quotes[quoteIndex]}
           </div>
 
           {/* Subtle line that expands under the quote */}
-          <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent transition-all duration-[5000ms] ease-out ${visible ? 'w-3/4 opacity-100' : 'w-0 opacity-0'}`} />
+          <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] delay-500 ${visible ? 'w-3/4 opacity-100' : 'w-0 opacity-0'}`} />
 
           {/* Subtle glow behind the text to mimic atmospheric light */}
-          <div className={`absolute inset-0 bg-white/5 blur-2xl transition-opacity duration-[4000ms] rounded-full ${visible ? 'opacity-100' : 'opacity-0'}`} />
+          <div className={`absolute inset-0 bg-white/5 blur-2xl transition-all duration-[5000ms] ease-[cubic-bezier(0.22,1,0.36,1)] rounded-full ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`} />
         </div>
       </div>
 
