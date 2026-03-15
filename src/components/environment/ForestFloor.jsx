@@ -630,7 +630,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Fallen Leaves */}
-        <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow>
+        <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow frustumCulled={false}>
              <LeafMaterial color="#8b5a2b" uWindStrength={0.0} uUseAlphaMask={1.0} />
              {fallenData.map((data, i) => (
                  <Instance
@@ -644,7 +644,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Grass Instances */}
-        <Instances range={grassData.length} geometry={grassGeo} castShadow receiveShadow>
+        <Instances range={grassData.length} geometry={grassGeo} receiveShadow frustumCulled={false}>
             <LeafMaterial color="#4a6f1b" uWindStrength={0.3} uWindSpeed={1.0} uUseAlphaMask={0.0} />
             {grassData.map((data, i) => (
                 <Instance
@@ -658,7 +658,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Fern Instances */}
-        <Instances range={fernData.length} geometry={fernGeo} castShadow receiveShadow>
+        <Instances range={fernData.length} geometry={fernGeo} receiveShadow frustumCulled={false}>
              <LeafMaterial color="#2d5a27" uWindStrength={0.2} uWindSpeed={0.8} uUseAlphaMask={0.0} />
              {fernData.map((data, i) => (
                  <Instance
@@ -672,7 +672,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Broadleaf Instances */}
-        <Instances range={broadleafData.length} geometry={broadleafGeo} castShadow receiveShadow>
+        <Instances range={broadleafData.length} geometry={broadleafGeo} castShadow receiveShadow frustumCulled={false}>
              <LeafMaterial color="#3a5f2d" uWindStrength={0.4} uWindSpeed={0.7} uUseAlphaMask={1.0} />
              {broadleafData.map((data, i) => (
                  <Instance
@@ -686,7 +686,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Bush Instances (Update: uUseAlphaMask=1.0 for better leaf shape) */}
-        <Instances range={bushData.length} geometry={bushGeo} castShadow receiveShadow>
+        <Instances range={bushData.length} geometry={bushGeo} castShadow receiveShadow frustumCulled={false}>
              <LeafMaterial color="#224422" uWindStrength={0.15} uWindSpeed={0.5} uUseAlphaMask={1.0} />
              {bushData.map((data, i) => (
                  <Instance
@@ -700,7 +700,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Flower Instances */}
-        <Instances range={flowerData.length} geometry={flowerGeo}>
+        <Instances range={flowerData.length} geometry={flowerGeo} frustumCulled={false}>
              <LeafMaterial
                 uWindStrength={0.1}
                 uUseAlphaMask={0.0}

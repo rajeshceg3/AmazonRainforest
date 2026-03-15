@@ -8,34 +8,38 @@ const DynamicDepthOfField = () => {
   const { camera, scene } = useThree()
   const raycaster = useRef(new THREE.Raycaster())
   const center = useRef(new THREE.Vector2(0, 0)) // Center of screen
-  const [targetFocus, setTargetFocus] = useState(0.01)
+  const targetFocus = useRef(0.01)
+  const frameCount = useRef(0)
 
   useFrame((state, delta) => {
     if (!dofRef.current) return
 
-    // Cast ray from center of camera
-    raycaster.current.setFromCamera(center.current, camera)
+    frameCount.current += 1
+    if (frameCount.current % 10 === 0) {
+      // Cast ray from center of camera
+      raycaster.current.setFromCamera(center.current, camera)
 
-    // Intersect with scene objects (you might want to filter this to only specific 'fauna' objects if performance is an issue)
-    const intersects = raycaster.current.intersectObjects(scene.children, true)
+      // Intersect with scene objects (you might want to filter this to only specific 'fauna' objects if performance is an issue)
+      const intersects = raycaster.current.intersectObjects(scene.children, true)
 
-    if (intersects.length > 0) {
-      // Find the first valid intersection (avoiding post-processing or invisible planes)
-      const hit = intersects.find(i => i.object.type === 'Mesh' || i.object.type === 'InstancedMesh')
+      if (intersects.length > 0) {
+        // Find the first valid intersection (avoiding post-processing or invisible planes)
+        const hit = intersects.find(i => i.object.type === 'Mesh' || i.object.type === 'InstancedMesh')
 
-      if (hit) {
-        // Map real world distance to DepthOfField focusDistance (approximate mapping)
-        const dist = hit.distance
-        // The DoF focusDistance is normalized, usually between 0 and 1, where 1 is the far clipping plane
-        // Need to normalize the distance based on camera near/far
-        const normalizedDist = Math.max(0.01, Math.min(dist / camera.far, 1.0))
-        setTargetFocus(normalizedDist)
+        if (hit) {
+          // Map real world distance to DepthOfField focusDistance (approximate mapping)
+          const dist = hit.distance
+          // The DoF focusDistance is normalized, usually between 0 and 1, where 1 is the far clipping plane
+          // Need to normalize the distance based on camera near/far
+          const normalizedDist = Math.max(0.01, Math.min(dist / camera.far, 1.0))
+          targetFocus.current = normalizedDist
+        } else {
+          // Default far focus
+          targetFocus.current = 0.01
+        }
       } else {
-        // Default far focus
-        setTargetFocus(0.01)
+        targetFocus.current = 0.01
       }
-    } else {
-      setTargetFocus(0.01)
     }
 
     // Update focus distance on the effect directly
@@ -46,7 +50,7 @@ const DynamicDepthOfField = () => {
 
     dofRef.current.currentFocus = THREE.MathUtils.lerp(
       dofRef.current.currentFocus,
-      targetFocus,
+      targetFocus.current,
       delta * 4.0
     );
 
