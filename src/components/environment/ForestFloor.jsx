@@ -405,6 +405,18 @@ const ForestFloor = () => {
   const flowerGeo = useFlowerGeometry()
   const logGeo = useLogGeometry()
 
+  // Compute a global bounding sphere to encompass the entire terrain for instanced geometries
+  // This allows us to use frustumCulled={true} on Instances, saving massive GPU processing.
+  useMemo(() => {
+      const globalSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 380)
+      grassGeo.boundingSphere = globalSphere
+      fernGeo.boundingSphere = globalSphere
+      broadleafGeo.boundingSphere = globalSphere
+      bushGeo.boundingSphere = globalSphere
+      flowerGeo.boundingSphere = globalSphere
+      fallenGeo.boundingSphere = globalSphere
+  }, [grassGeo, fernGeo, broadleafGeo, bushGeo, flowerGeo, fallenGeo])
+
   const groundGeo = useMemo(() => {
     const geo = new THREE.PlaneGeometry(400, 400, 256, 256)
     const pos = geo.attributes.position
@@ -630,7 +642,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Fallen Leaves */}
-        <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow frustumCulled={false}>
+        <Instances range={fallenData.length} geometry={fallenGeo} receiveShadow>
              <LeafMaterial color="#8b5a2b" uWindStrength={0.0} uUseAlphaMask={1.0} />
              {fallenData.map((data, i) => (
                  <Instance
@@ -644,7 +656,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Grass Instances */}
-        <Instances range={grassData.length} geometry={grassGeo} receiveShadow frustumCulled={false}>
+        <Instances range={grassData.length} geometry={grassGeo} receiveShadow>
             <LeafMaterial color="#4a6f1b" uWindStrength={0.3} uWindSpeed={1.0} uUseAlphaMask={0.0} />
             {grassData.map((data, i) => (
                 <Instance
@@ -658,7 +670,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Fern Instances */}
-        <Instances range={fernData.length} geometry={fernGeo} receiveShadow frustumCulled={false}>
+        <Instances range={fernData.length} geometry={fernGeo} receiveShadow>
              <LeafMaterial color="#2d5a27" uWindStrength={0.2} uWindSpeed={0.8} uUseAlphaMask={0.0} />
              {fernData.map((data, i) => (
                  <Instance
@@ -672,7 +684,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Broadleaf Instances */}
-        <Instances range={broadleafData.length} geometry={broadleafGeo} castShadow receiveShadow frustumCulled={false}>
+        <Instances range={broadleafData.length} geometry={broadleafGeo} castShadow receiveShadow>
              <LeafMaterial color="#3a5f2d" uWindStrength={0.4} uWindSpeed={0.7} uUseAlphaMask={1.0} />
              {broadleafData.map((data, i) => (
                  <Instance
@@ -686,7 +698,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Bush Instances (Update: uUseAlphaMask=1.0 for better leaf shape) */}
-        <Instances range={bushData.length} geometry={bushGeo} castShadow receiveShadow frustumCulled={false}>
+        <Instances range={bushData.length} geometry={bushGeo} castShadow receiveShadow>
              <LeafMaterial color="#224422" uWindStrength={0.15} uWindSpeed={0.5} uUseAlphaMask={1.0} />
              {bushData.map((data, i) => (
                  <Instance
@@ -700,7 +712,7 @@ const ForestFloor = () => {
         </Instances>
 
         {/* Flower Instances */}
-        <Instances range={flowerData.length} geometry={flowerGeo} frustumCulled={false}>
+        <Instances range={flowerData.length} geometry={flowerGeo}>
              <LeafMaterial
                 uWindStrength={0.1}
                 uUseAlphaMask={0.0}

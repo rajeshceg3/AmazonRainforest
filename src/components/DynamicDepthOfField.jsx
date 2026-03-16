@@ -18,9 +18,22 @@ const DynamicDepthOfField = () => {
     if (frameCount.current % 10 === 0) {
       // Cast ray from center of camera
       raycaster.current.setFromCamera(center.current, camera)
+      // Limit ray distance to optimize intersection tests
+      raycaster.current.far = 40
 
-      // Intersect with scene objects (you might want to filter this to only specific 'fauna' objects if performance is an issue)
-      const intersects = raycaster.current.intersectObjects(scene.children, true)
+      // Find objects explicitly to raycast against, avoiding the entire scene.
+      // Or filter out InstancedMesh objects since they are the heaviest to raycast against
+      // when they have tens of thousands of instances.
+      const objectsToIntersect = []
+      scene.traverse(obj => {
+          // Exclude huge InstancedMesh (grass, ferns, etc.)
+          if (obj.isInstancedMesh && obj.count > 100) return
+          if (obj.isMesh || obj.isInstancedMesh) {
+              objectsToIntersect.push(obj)
+          }
+      })
+
+      const intersects = raycaster.current.intersectObjects(objectsToIntersect, false)
 
       if (intersects.length > 0) {
         // Find the first valid intersection (avoiding post-processing or invisible planes)

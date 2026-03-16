@@ -224,12 +224,13 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
   const wingGeo = useButterflyWingGeometry()
   const baseFlapSpeed = useRef(12.0 + Math.random() * 8.0)
 
-  // Instance state
-  const [flapSpeed, setFlapSpeed] = useState(baseFlapSpeed.current)
-  const [flapStrength, setFlapStrength] = useState(1.0)
-  const [color1] = useState(() => new THREE.Color().setHSL(0.6, 1.0, 0.5 + Math.random() * 0.2))
-  const [color2] = useState(() => new THREE.Color('#8800ff'))
-  const [offset] = useState(() => Math.random() * 100)
+  // Instance state.
+  // Use refs instead of state for frequently changing variables to prevent React re-render storms.
+  const flapSpeed = useRef(baseFlapSpeed.current)
+  const flapStrength = useRef(1.0)
+  const color1 = useMemo(() => new THREE.Color().setHSL(0.6, 1.0, 0.5 + Math.random() * 0.2), [])
+  const color2 = useMemo(() => new THREE.Color('#8800ff'), [])
+  const offset = useMemo(() => Math.random() * 100, [])
 
   useFrame((state) => {
     const t = state.clock.elapsedTime + offset
@@ -302,8 +303,8 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
           <ButterflyMaterial
             uColor1={color1}
             uColor2={color2}
-            uFlapSpeed={15.0}
-            uFlapStrength={1.0}
+            uFlapSpeed={flapSpeed.current}
+            uFlapStrength={flapStrength.current}
           />
       </mesh>
 
@@ -318,8 +319,8 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
          <ButterflyMaterial
             uColor1={color1}
             uColor2={color2}
-            uFlapSpeed={15.0}
-            uFlapStrength={1.0}
+            uFlapSpeed={flapSpeed.current}
+            uFlapStrength={flapStrength.current}
           />
       </mesh>
     </group>
