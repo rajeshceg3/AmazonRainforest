@@ -149,10 +149,12 @@ const StillnessAura = () => {
         window.dispatchEvent(new CustomEvent('stillnessUpdate', { detail: activeStillness.current }))
     })
 
+    const boundingSphere = useMemo(() => new THREE.Sphere(new THREE.Vector3(0, 0, 0), 50), [])
+
     return (
         <group>
-            <points ref={pointsRef} frustumCulled={false}>
-                <bufferGeometry>
+            <points ref={pointsRef}>
+                <bufferGeometry boundingSphere={boundingSphere}>
                     <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
                     <bufferAttribute attach="attributes-aScale" count={count} array={scales} itemSize={1} />
                     <bufferAttribute attach="attributes-aOffset" count={count} array={offsets} itemSize={3} />
