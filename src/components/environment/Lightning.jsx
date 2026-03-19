@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Line } from '@react-three/drei'
 import * as THREE from 'three'
@@ -35,47 +35,22 @@ const generateBolt = (start, end, segments = 8, offsetAmount = 10) => {
     return points
 }
 
-const LightningBolt = ({ start, end, visible }) => {
-    // Memoize geometry so it doesn't jitter every frame, only when 'start'/'end' changes
-    // But we want it to change every flash.
-    // We can use a 'seed' or just rely on start/end changing.
-
-    const points = useMemo(() => {
-        if (!visible) return []
-        return generateBolt(start, end, 5, 15) // 5 iterations
-    }, [start, end, visible])
-
-    if (!visible) return null
-
-    return (
-        <Line
-            points={points}
-            color="white"
-            lineWidth={3} // Thick core
-            toneMapped={false} // Emissive look
-            transparent
-            opacity={0.8}
-        />
-    )
-}
-
 const Lightning = () => {
   const light = useRef()
+  const lineRef = useRef()
+  const groupRef = useRef()
+
   // Schedule first flash between 30s and 90s to ensure scene is calm initially
   const nextFlashTime = useRef(30 + Math.random() * 60)
   const isFlashing = useRef(false)
   const flashDuration = 0.2
   const flashStartTime = useRef(0)
 
-  // State for bolt rendering
-  const [boltData, setBoltData] = useState({
-      start: new THREE.Vector3(0, 100, 0),
-      end: new THREE.Vector3(0, 0, 0),
-      visible: false
-  })
+  // Pre-generate a dummy array of points to avoid continuous reallocation
+  const dummyPoints = useMemo(() => [new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0)], [])
 
   useFrame((state) => {
-    if (!light.current) return
+    if (!light.current || !groupRef.current) return
     const time = state.clock.elapsedTime
 
     if (isFlashing.current) {
@@ -84,7 +59,9 @@ const Lightning = () => {
         if (elapsed >= flashDuration) {
             light.current.intensity = 0
             isFlashing.current = false
-            setBoltData(d => ({ ...d, visible: false }))
+
+            // Hide the bolt directly
+            groupRef.current.visible = false
 
             // Schedule next flash: 60s to 120s interval (Rare)
             nextFlashTime.current = time + 60 + Math.random() * 60
@@ -115,12 +92,18 @@ const Lightning = () => {
             light.current.position.copy(startPos)
             light.current.intensity = 800
 
-            // Trigger Bolt Visibility
-            setBoltData({
-                start: startPos,
-                end: endPos,
-                visible: true
-            })
+            // Generate points
+            const points = generateBolt(startPos, endPos, 5, 15) // 5 iterations
+
+            // Update Line directly without React state
+            if (lineRef.current) {
+                lineRef.current.geometry.setPositions(
+                    points.map(p => [p.x, p.y, p.z]).flat()
+                )
+            }
+
+            // Make visible directly
+            groupRef.current.visible = true
 
             // Trigger Sound
             const dist = state.camera.position.distanceTo(light.current.position)
@@ -140,11 +123,17 @@ const Lightning = () => {
           distance={800}  // Long reach
           decay={2}
         />
-        <LightningBolt
-            start={boltData.start}
-            end={boltData.end}
-            visible={boltData.visible}
-        />
+        <group ref={groupRef} visible={false}>
+            <Line
+                ref={lineRef}
+                points={dummyPoints}
+                color="white"
+                lineWidth={3} // Thick core
+                toneMapped={false} // Emissive look
+                transparent
+                opacity={0.8}
+            />
+        </group>
     </group>
   )
 }

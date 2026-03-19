@@ -22,6 +22,8 @@ const WaterLilies = ({ count = 40 }) => {
       // Pac-man shape: Circle with a wedge missing
       // Radius 1, 32 segments, start angle 0.3, length 2PI - 0.6
       const geo = new THREE.CircleGeometry(1, 32, 0.3, Math.PI * 2 - 0.6)
+      // Add global bounding sphere to encompass all lilies so frustum culling works correctly
+      geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 400)
       // UVs are automatically generated for CircleGeometry (radial or planar?)
       // CircleGeometry UVs: center is 0.5,0.5. Rim is circle.
       // This works perfectly for my shader logic (radial distance).

@@ -81,6 +81,9 @@ const EpiphyteGeometry = () => {
         cluster.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2))
         cluster.setIndex(indices)
 
+        // Assign global bounding sphere to encompass all instances
+        cluster.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 400)
+
         return cluster
     }, [])
 }
