@@ -55,9 +55,16 @@ const FallingLeaves = ({ count = 300 }) => {
       mesh.current.instanceMatrix.needsUpdate = true
   })
 
+  const geometry = useMemo(() => {
+    const geo = new THREE.PlaneGeometry(0.3, 0.4)
+    // Add global bounding sphere to encompass all leaves so frustum culling works
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 400)
+    return geo
+  }, [])
+
   return (
-    <instancedMesh ref={mesh} args={[null, null, count]} frustumCulled={false}>
-      <planeGeometry args={[0.3, 0.4]} />
+    <instancedMesh ref={mesh} args={[null, null, count]}>
+      <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial color="#d49b5c" side={THREE.DoubleSide} transparent opacity={0.8} />
     </instancedMesh>
   )

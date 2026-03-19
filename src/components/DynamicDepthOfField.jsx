@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { DepthOfField } from '@react-three/postprocessing'
 import * as THREE from 'three'
@@ -10,6 +10,31 @@ const DynamicDepthOfField = () => {
   const center = useRef(new THREE.Vector2(0, 0)) // Center of screen
   const targetFocus = useRef(0.01)
   const frameCount = useRef(0)
+  const intersectTargets = useRef([])
+
+  useEffect(() => {
+    // Cache objects to intersect once (or when scene.children changes)
+    // to avoid expensive scene.traverse every 10 frames
+    const updateTargets = () => {
+      const targets = []
+      scene.traverse(obj => {
+          // Exclude huge InstancedMesh (grass, ferns, etc.)
+          if (obj.isInstancedMesh && obj.count > 100) return
+          if (obj.isMesh || obj.isInstancedMesh) {
+              targets.push(obj)
+          }
+      })
+      intersectTargets.current = targets
+    }
+
+    // Initial build
+    updateTargets()
+
+    // Periodically update the target list for new objects like butterflies
+    // (A 5-second interval is much lighter than 10 frames)
+    const interval = setInterval(updateTargets, 5000)
+    return () => clearInterval(interval)
+  }, [scene])
 
   useFrame((state, delta) => {
     if (!dofRef.current) return
@@ -21,19 +46,7 @@ const DynamicDepthOfField = () => {
       // Limit ray distance to optimize intersection tests
       raycaster.current.far = 40
 
-      // Find objects explicitly to raycast against, avoiding the entire scene.
-      // Or filter out InstancedMesh objects since they are the heaviest to raycast against
-      // when they have tens of thousands of instances.
-      const objectsToIntersect = []
-      scene.traverse(obj => {
-          // Exclude huge InstancedMesh (grass, ferns, etc.)
-          if (obj.isInstancedMesh && obj.count > 100) return
-          if (obj.isMesh || obj.isInstancedMesh) {
-              objectsToIntersect.push(obj)
-          }
-      })
-
-      const intersects = raycaster.current.intersectObjects(objectsToIntersect, false)
+      const intersects = raycaster.current.intersectObjects(intersectTargets.current, false)
 
       if (intersects.length > 0) {
         // Find the first valid intersection (avoiding post-processing or invisible planes)

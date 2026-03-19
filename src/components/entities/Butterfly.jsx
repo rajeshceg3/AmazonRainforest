@@ -39,29 +39,30 @@ const useButterflyWingGeometry = () => {
 }
 
 // Custom Material Component using onBeforeCompile
-const ButterflyMaterial = ({ uColor1, uColor2, uFlapSpeed, uFlapStrength, ...props }) => {
+const ButterflyMaterial = ({ uColor1, uColor2, flapSpeedRef, flapStrengthRef, ...props }) => {
     const materialRef = useRef()
     const uniforms = useRef({
         uTime: { value: 0 },
         uColor1: { value: uColor1 },
         uColor2: { value: uColor2 },
-        uFlapSpeed: { value: uFlapSpeed },
-        uFlapStrength: { value: uFlapStrength }
+        uFlapSpeed: { value: flapSpeedRef.current },
+        uFlapStrength: { value: flapStrengthRef.current }
     })
 
-    // Update uniforms
+    // Update uniforms when initial colors change
     useLayoutEffect(() => {
         if (uniforms.current) {
             uniforms.current.uColor1.value = uColor1
             uniforms.current.uColor2.value = uColor2
-            uniforms.current.uFlapSpeed.value = uFlapSpeed
-            uniforms.current.uFlapStrength.value = uFlapStrength
         }
-    }, [uColor1, uColor2, uFlapSpeed, uFlapStrength])
+    }, [uColor1, uColor2])
 
     useFrame((state) => {
         if (uniforms.current) {
             uniforms.current.uTime.value = state.clock.elapsedTime
+            // Read directly from refs to avoid React re-renders on prop updates
+            uniforms.current.uFlapSpeed.value = flapSpeedRef.current
+            uniforms.current.uFlapStrength.value = flapStrengthRef.current
         }
     })
 
@@ -303,8 +304,8 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
           <ButterflyMaterial
             uColor1={color1}
             uColor2={color2}
-            uFlapSpeed={flapSpeed.current}
-            uFlapStrength={flapStrength.current}
+            flapSpeedRef={flapSpeed}
+            flapStrengthRef={flapStrength}
           />
       </mesh>
 
@@ -319,8 +320,8 @@ const Butterfly = ({ position = [0, 0, 0] }) => {
          <ButterflyMaterial
             uColor1={color1}
             uColor2={color2}
-            uFlapSpeed={flapSpeed.current}
-            uFlapStrength={flapStrength.current}
+            flapSpeedRef={flapSpeed}
+            flapStrengthRef={flapStrength}
           />
       </mesh>
     </group>
