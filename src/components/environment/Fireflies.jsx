@@ -78,9 +78,12 @@ const Fireflies = ({ count = 400 }) => {
     }
   })
 
+  // Add bounding sphere to buffer geometry so fireflies are not culled incorrectly
+  const boundingSphere = useMemo(() => new THREE.Sphere(new THREE.Vector3(0, 0, 0), 400), [])
+
   return (
     <points ref={points}>
-      <bufferGeometry>
+      <bufferGeometry boundingSphere={boundingSphere}>
         <bufferAttribute
           attach="attributes-position"
           count={count}
