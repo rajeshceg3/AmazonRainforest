@@ -13,7 +13,6 @@ const Overlay = () => {
   const [visible, setVisible] = useState(false)
   const [showHint, setShowHint] = useState(false)
   const [hasMoved, setHasMoved] = useState(false)
-  const [stillness, setStillness] = useState(0)
 
   useEffect(() => {
     // Initial delays to let user land in the scene before showing hints
@@ -38,7 +37,6 @@ const Overlay = () => {
   useEffect(() => {
     const handleStillness = (e) => {
       const currentStillness = e.detail
-      setStillness(currentStillness)
 
       // If fully still, show quote
       if (currentStillness > 0.8 && !visible) {
