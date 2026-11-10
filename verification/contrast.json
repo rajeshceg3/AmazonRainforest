@@ -1,0 +1,1018 @@
+[
+  {
+    "width": 320,
+    "state": "entry",
+    "element": 0,
+    "minimum": 13.06810468729501,
+    "font": "44px",
+    "glyphPixels": 9233
+  },
+  {
+    "width": 320,
+    "state": "entry",
+    "element": 1,
+    "minimum": 11.05857218479743,
+    "font": "16px",
+    "glyphPixels": 6249
+  },
+  {
+    "width": 320,
+    "state": "entry",
+    "element": 2,
+    "minimum": 11.05857218479743,
+    "font": "16px",
+    "glyphPixels": 5073
+  },
+  {
+    "width": 320,
+    "state": "entry",
+    "element": 3,
+    "minimum": 11.05857218479743,
+    "font": "14px",
+    "glyphPixels": 3806
+  },
+  {
+    "width": 320,
+    "state": "entry",
+    "element": 4,
+    "minimum": 8.738672088342494,
+    "font": "16px",
+    "glyphPixels": 2995
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 1,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 738
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 2,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 775
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 3,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 700
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 4,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 808
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 5,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 888
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 6,
+    "minimum": 13.06810468729501,
+    "font": "27px",
+    "glyphPixels": 1322
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 7,
+    "minimum": 13.06810468729501,
+    "font": "15px",
+    "glyphPixels": 8628
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 8,
+    "minimum": 10.316977171369773,
+    "font": "14px",
+    "glyphPixels": 4049
+  },
+  {
+    "width": 320,
+    "state": "dark",
+    "element": 9,
+    "minimum": 10.260865207063842,
+    "font": "14px",
+    "glyphPixels": 2031
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 1,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 723
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 2,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 754
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 3,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 654
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 4,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 772
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 5,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 847
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 6,
+    "minimum": 11.828770177722856,
+    "font": "27px",
+    "glyphPixels": 1289
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 7,
+    "minimum": 11.828770177722856,
+    "font": "15px",
+    "glyphPixels": 8297
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 8,
+    "minimum": 6.9098382525009505,
+    "font": "14px",
+    "glyphPixels": 3897
+  },
+  {
+    "width": 320,
+    "state": "light",
+    "element": 9,
+    "minimum": 8.65303608999807,
+    "font": "14px",
+    "glyphPixels": 1961
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 1,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 738
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 2,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 775
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 3,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 700
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 4,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 808
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 5,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 888
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 6,
+    "minimum": 13.06810468729501,
+    "font": "27px",
+    "glyphPixels": 1322
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 7,
+    "minimum": 13.06810468729501,
+    "font": "15px",
+    "glyphPixels": 8628
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 8,
+    "minimum": 10.316977171369773,
+    "font": "14px",
+    "glyphPixels": 4049
+  },
+  {
+    "width": 320,
+    "state": "dark-bottom",
+    "element": 9,
+    "minimum": 10.260865207063842,
+    "font": "14px",
+    "glyphPixels": 2031
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 1,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 723
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 2,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 754
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 3,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 654
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 4,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 772
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 5,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 847
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 6,
+    "minimum": 11.828770177722856,
+    "font": "27px",
+    "glyphPixels": 1289
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 7,
+    "minimum": 11.828770177722856,
+    "font": "15px",
+    "glyphPixels": 8297
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 8,
+    "minimum": 6.9098382525009505,
+    "font": "14px",
+    "glyphPixels": 3897
+  },
+  {
+    "width": 320,
+    "state": "light-bottom",
+    "element": 9,
+    "minimum": 8.65303608999807,
+    "font": "14px",
+    "glyphPixels": 1961
+  },
+  {
+    "width": 390,
+    "state": "entry",
+    "element": 0,
+    "minimum": 13.06810468729501,
+    "font": "44px",
+    "glyphPixels": 9320
+  },
+  {
+    "width": 390,
+    "state": "entry",
+    "element": 1,
+    "minimum": 11.05857218479743,
+    "font": "16px",
+    "glyphPixels": 6279
+  },
+  {
+    "width": 390,
+    "state": "entry",
+    "element": 2,
+    "minimum": 11.05857218479743,
+    "font": "16px",
+    "glyphPixels": 5068
+  },
+  {
+    "width": 390,
+    "state": "entry",
+    "element": 3,
+    "minimum": 11.05857218479743,
+    "font": "14px",
+    "glyphPixels": 3756
+  },
+  {
+    "width": 390,
+    "state": "entry",
+    "element": 4,
+    "minimum": 8.738672088342494,
+    "font": "16px",
+    "glyphPixels": 2995
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 1,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 738
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 2,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 762
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 3,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 668
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 4,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 775
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 5,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 940
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 6,
+    "minimum": 13.06810468729501,
+    "font": "27px",
+    "glyphPixels": 1322
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 7,
+    "minimum": 13.06810468729501,
+    "font": "15px",
+    "glyphPixels": 8586
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 8,
+    "minimum": 10.316977171369773,
+    "font": "14px",
+    "glyphPixels": 4055
+  },
+  {
+    "width": 390,
+    "state": "dark",
+    "element": 9,
+    "minimum": 10.260865207063842,
+    "font": "14px",
+    "glyphPixels": 2031
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 1,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 723
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 2,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 742
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 3,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 651
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 4,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 744
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 5,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 864
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 6,
+    "minimum": 11.828770177722856,
+    "font": "27px",
+    "glyphPixels": 1289
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 7,
+    "minimum": 11.828770177722856,
+    "font": "15px",
+    "glyphPixels": 8226
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 8,
+    "minimum": 6.9098382525009505,
+    "font": "14px",
+    "glyphPixels": 3889
+  },
+  {
+    "width": 390,
+    "state": "light",
+    "element": 9,
+    "minimum": 8.65303608999807,
+    "font": "14px",
+    "glyphPixels": 1961
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 1,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 738
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 2,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 762
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 3,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 668
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 4,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 775
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 5,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 940
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 6,
+    "minimum": 13.06810468729501,
+    "font": "27px",
+    "glyphPixels": 1322
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 7,
+    "minimum": 13.06810468729501,
+    "font": "15px",
+    "glyphPixels": 8586
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 8,
+    "minimum": 10.316977171369773,
+    "font": "14px",
+    "glyphPixels": 4055
+  },
+  {
+    "width": 390,
+    "state": "dark-bottom",
+    "element": 9,
+    "minimum": 10.260865207063842,
+    "font": "14px",
+    "glyphPixels": 2031
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 1,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 723
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 2,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 742
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 3,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 651
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 4,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 744
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 5,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 864
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 6,
+    "minimum": 11.828770177722856,
+    "font": "27px",
+    "glyphPixels": 1289
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 7,
+    "minimum": 11.828770177722856,
+    "font": "15px",
+    "glyphPixels": 8226
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 8,
+    "minimum": 6.9098382525009505,
+    "font": "14px",
+    "glyphPixels": 3889
+  },
+  {
+    "width": 390,
+    "state": "light-bottom",
+    "element": 9,
+    "minimum": 8.65303608999807,
+    "font": "14px",
+    "glyphPixels": 1961
+  },
+  {
+    "width": 1440,
+    "state": "entry",
+    "element": 0,
+    "minimum": 13.06810468729501,
+    "font": "78px",
+    "glyphPixels": 29668
+  },
+  {
+    "width": 1440,
+    "state": "entry",
+    "element": 1,
+    "minimum": 11.05857218479743,
+    "font": "18px",
+    "glyphPixels": 8297
+  },
+  {
+    "width": 1440,
+    "state": "entry",
+    "element": 2,
+    "minimum": 11.05857218479743,
+    "font": "18px",
+    "glyphPixels": 6558
+  },
+  {
+    "width": 1440,
+    "state": "entry",
+    "element": 3,
+    "minimum": 11.05857218479743,
+    "font": "18px",
+    "glyphPixels": 6539
+  },
+  {
+    "width": 1440,
+    "state": "entry",
+    "element": 4,
+    "minimum": 8.738672088342494,
+    "font": "16px",
+    "glyphPixels": 2988
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 0,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 541
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 1,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 740
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 2,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 759
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 3,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 664
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 4,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 800
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 5,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 928
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 6,
+    "minimum": 13.06810468729501,
+    "font": "32px",
+    "glyphPixels": 1914
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 7,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 9865
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 8,
+    "minimum": 10.316977171369773,
+    "font": "14px",
+    "glyphPixels": 7672
+  },
+  {
+    "width": 1440,
+    "state": "dark",
+    "element": 9,
+    "minimum": 10.260865207063842,
+    "font": "14px",
+    "glyphPixels": 2031
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 0,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 532
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 1,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 726
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 2,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 735
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 3,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 632
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 4,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 771
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 5,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 860
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 6,
+    "minimum": 11.828770177722856,
+    "font": "32px",
+    "glyphPixels": 1857
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 7,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 9495
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 8,
+    "minimum": 6.9098382525009505,
+    "font": "14px",
+    "glyphPixels": 7325
+  },
+  {
+    "width": 1440,
+    "state": "light",
+    "element": 9,
+    "minimum": 8.65303608999807,
+    "font": "14px",
+    "glyphPixels": 1961
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 0,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 541
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 1,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 740
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 2,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 759
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 3,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 664
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 4,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 800
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 5,
+    "minimum": 13.06810468729501,
+    "font": "14px",
+    "glyphPixels": 928
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 6,
+    "minimum": 13.06810468729501,
+    "font": "32px",
+    "glyphPixels": 1914
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 7,
+    "minimum": 13.06810468729501,
+    "font": "16px",
+    "glyphPixels": 9865
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 8,
+    "minimum": 10.316977171369773,
+    "font": "14px",
+    "glyphPixels": 7672
+  },
+  {
+    "width": 1440,
+    "state": "dark-bottom",
+    "element": 9,
+    "minimum": 10.260865207063842,
+    "font": "14px",
+    "glyphPixels": 2031
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 0,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 532
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 1,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 726
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 2,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 735
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 3,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 632
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 4,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 771
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 5,
+    "minimum": 11.828770177722856,
+    "font": "14px",
+    "glyphPixels": 860
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 6,
+    "minimum": 11.828770177722856,
+    "font": "32px",
+    "glyphPixels": 1857
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 7,
+    "minimum": 11.828770177722856,
+    "font": "16px",
+    "glyphPixels": 9495
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 8,
+    "minimum": 6.9098382525009505,
+    "font": "14px",
+    "glyphPixels": 7325
+  },
+  {
+    "width": 1440,
+    "state": "light-bottom",
+    "element": 9,
+    "minimum": 8.65303608999807,
+    "font": "14px",
+    "glyphPixels": 1961
+  }
+]

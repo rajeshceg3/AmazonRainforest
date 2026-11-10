@@ -1,0 +1,978 @@
+{
+  "states": [
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "dark",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": false,
+      "theme": "light",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "dark",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 320,
+      "reduced": true,
+      "theme": "light",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "dark",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": false,
+      "theme": "light",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "dark",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 390,
+      "reduced": true,
+      "theme": "light",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "dark",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": true,
+      "theme": "light",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "river",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "jaguar",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "dolphin",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "sloth",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "macaw",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "frog",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "dark",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "hummingbird",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "butterfly",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    },
+    {
+      "width": 1440,
+      "reduced": false,
+      "theme": "light",
+      "id": "lilies",
+      "dragReset": true,
+      "keyboardReset": true,
+      "minFont": 14
+    }
+  ],
+  "errors": [],
+  "notes": "All nine views, both control themes, 320/390/1440 widths, normal/reduced motion. Final phone caption treatment also separately rechecked at 320px."
+}
