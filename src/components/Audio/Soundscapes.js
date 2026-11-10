@@ -214,13 +214,13 @@ class FrogLayer {
                 this.panner.positionZ.value = pos.z + Math.sin(angle) * dist
                 const note = "F2"
                 this.synth.triggerAttackRelease(note, "16n", time)
-                setTimeout(() => { this.synth.triggerAttackRelease(note, "16n", Tone.now()) }, 150)
+                setTimeout(() => { if(this.disposed)return; this.synth.triggerAttackRelease(note, "16n", Tone.now()) }, 150)
                 this.lastCroakTime = time
             }
         }
     }
   }
-  dispose() { this.synth.dispose(); this.panner.dispose() }
+  dispose() { this.disposed=true; this.synth.dispose(); this.panner.dispose() }
 }
 
 // --- Howler Monkey Layer ---
@@ -285,21 +285,21 @@ class CreatureManager {
   playToucan(time) {
       const note = "C3"; this.toucanSynth.detune.value = (Math.random() - 0.5) * 200
       this.toucanSynth.triggerAttackRelease(note, "16n", time)
-      setTimeout(() => { this.toucanSynth.triggerAttackRelease(note, "16n", Tone.now()) }, 400 + Math.random() * 50)
+      setTimeout(() => { if(this.disposed)return; this.toucanSynth.triggerAttackRelease(note, "16n", Tone.now()) }, 400 + Math.random() * 50)
   }
   playPiha(time) {
       const pitchVar = 0.9 + Math.random() * 0.2; const startFreq = 1200 * pitchVar; const endFreq = 1800 * pitchVar
       this.pihaSynth.triggerAttack(startFreq, time); this.pihaSynth.frequency.rampTo(endFreq, 0.4, time)
       this.pihaSynth.triggerRelease(time + 0.5)
       setTimeout(() => {
-          const t2 = Tone.now(); this.pihaSynth.triggerAttack(1500 * pitchVar, t2); this.pihaSynth.frequency.rampTo(1000 * pitchVar, 0.3, t2)
+          if(this.disposed)return; const t2 = Tone.now(); this.pihaSynth.triggerAttack(1500 * pitchVar, t2); this.pihaSynth.frequency.rampTo(1000 * pitchVar, 0.3, t2)
           this.pihaSynth.triggerRelease(t2 + 0.4)
       }, 800 + Math.random() * 100)
   }
   playParrot(time) {
       this.parrotSynth.envelope.decay = 0.1 + Math.random() * 0.3; this.parrotSynth.triggerAttackRelease("8n", time)
   }
-  dispose() { this.toucanSynth.dispose(); this.toucanVibrato.dispose(); this.pihaSynth.dispose(); this.pihaVibrato.dispose(); this.parrotSynth.dispose(); this.birdPanner.dispose(); this.compressor.dispose() }
+  dispose() { this.disposed=true; this.toucanSynth.dispose(); this.toucanVibrato.dispose(); this.pihaSynth.dispose(); this.pihaVibrato.dispose(); this.parrotSynth.dispose(); this.birdPanner.dispose(); this.compressor.dispose() }
 }
 
 // --- Ambience Layers ---
