@@ -13,7 +13,7 @@ The new scene provides nine explicit views: river clearing, jaguar, dolphin, slo
 - 108 combinations: nine views x three widths (320/390/1440) x two control themes x normal/reduced motion.
 - Real pointer drag followed by canonical Reset, and keyboard Home reset, in every combination.
 - No horizontal overflow or page errors in those runs; controls/captions at least 14px.
-- 125 actual glyph masks compared to the rendered backdrop. Minimum contrast 6.91:1. See `contrast.json`.
+- 127 actual glyph masks compared to the rendered backdrop. Minimum contrast 6.91:1. See `contrast.json`.
 - Semantic entry button; sound stays off on entry. Actual 14-second output captured from the browser, off disposes the soundscape, and replay succeeds without delayed callback errors. Subjective listening quality is not yet signed off.
 - Build and changed-file lint passed. The final phone note treatment was separately checked at 320px.
 
