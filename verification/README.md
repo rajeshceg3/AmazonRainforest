@@ -28,3 +28,7 @@ Jaguar, dolphin and sloth text was checked against:
 - https://www.worldwildlife.org/species/sloth
 
 Other creature and botanical notes describe the illustration rather than asserting an exact species or provenance.
+
+## Follow-up art/performance work
+
+Restore weather, lightning and post-processing at a safe frame budget. Keep the readable controls, subject presets, reset behavior and reduced-motion path. Profile real phone rendering before raising particle density. The previous high-density scene is preserved under tag `archive/high-density-before-phone-repair-20261111` and branch `archive/high-density-before-phone-repair-20261111` for a later comparison or selective restoration.
