@@ -306,17 +306,25 @@ class CreatureManager {
 class AmbienceLayer {
     constructor(outputNode) {
         this.output = outputNode
-        this.padSynth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 2, decay: 3, sustain: 0.5, release: 4 } }).connect(this.output)
-        this.padSynth.volume.value = -38
-        this.lastChordTime = 0; this.chords = [["C3", "E3", "G3"], ["A2", "C3", "E3"], ["F3", "A3", "C4"], ["G3", "B3", "D4"]]; this.currentChord = 0
+        // "Jungle breath": the whole forest rising and settling - a slow wash of
+        // leaves and distant life. Filtered noise, no pitched material.
+        this.noise = new Tone.Noise("brown")
+        this.filter = new Tone.Filter(220, "lowpass")
+        this.gainNode = new Tone.Gain(0)
+        this.noise.connect(this.filter); this.filter.connect(this.gainNode); this.gainNode.connect(this.output)
+        this.noise.volume.value = -14
+        this.noise.start()
+        this.breathLfo = new Tone.LFO(0.05, 160, 320).connect(this.filter.frequency).start()
+        this.phase = Math.random() * 100
     }
     update(pos, time) {
-        if (time - this.lastChordTime > 15) {
-             this.padSynth.triggerAttackRelease(this.chords[this.currentChord], "2m", time)
-             this.currentChord = (this.currentChord + 1) % this.chords.length; this.lastChordTime = time
-        }
+        // One slow breath every ~20 s; slightly fuller low in the forest.
+        const swell = 0.5 + 0.5 * Math.sin((time + this.phase) * (Math.PI * 2 / 20))
+        const low = THREE.MathUtils.clamp(1 - pos.y / 30, 0, 1)
+        const v = -46 + swell * 5 + low * 3
+        if (Number.isFinite(v)) { try { this.gainNode.gain.value = Tone.dbToGain(v) } catch { /* param may reject during dispose */ } }
     }
-    dispose() { this.padSynth.dispose() }
+    dispose() { this.noise.dispose(); this.filter.dispose(); this.gainNode.dispose(); this.breathLfo.dispose() }
 }
 class DeepAmbienceLayer {
   constructor(outputNode) {
@@ -443,88 +451,51 @@ class DistantThunderLayer {
 class ZenLayer {
     constructor(outputNode) {
         this.output = outputNode
+        // Stillness reward: when you stop moving, the forest comes closer -
+        // a soft shimmer of small insects and leaves, and sparse distant bird
+        // calls. Environmental, no pitched pad or melody.
+        this.shimmer = new Tone.Noise("pink")
+        this.shimmerFilter = new Tone.Filter(5200, "highpass")
+        this.shimmerGain = new Tone.Gain(0)
+        this.shimmer.connect(this.shimmerFilter); this.shimmerFilter.connect(this.shimmerGain); this.shimmerGain.connect(this.output)
+        this.shimmer.volume.value = -20
+        this.shimmer.start()
+        this.shimmerLfo = new Tone.LFO(0.13, 4200, 6400).connect(this.shimmerFilter.frequency).start()
 
-        // Deep Warm Pad
-        this.padSynth = new Tone.PolySynth(Tone.Synth, {
+        this.callSynth = new Tone.Synth({
             oscillator: { type: "sine" },
-            envelope: { attack: 5, decay: 5, sustain: 1.0, release: 10 }
+            envelope: { attack: 0.02, decay: 0.18, sustain: 0, release: 0.25 }
         }).connect(this.output)
+        this.callSynth.volume.value = -30
 
-        // Shimmering Chorus
-        this.chorus = new Tone.Chorus(4, 2.5, 0.5).connect(this.output).start()
-        this.fmSynth = new Tone.FMSynth({
-            harmonicity: 3, modulationIndex: 10, oscillator: { type: "sine" },
-            envelope: { attack: 4, decay: 4, sustain: 0.5, release: 8 },
-            modulation: { type: "triangle" }
-        }).connect(this.chorus)
-
-        // Initial volumes very low
-        this.padSynth.volume.value = -100
-        this.fmSynth.volume.value = -100
-
-        // State
         this.active = false
-        this.chords = [
-            ["C3", "E3", "G3", "B3"], // Cmaj7
-            ["F2", "A2", "C3", "E3"], // Fmaj7
-            ["A2", "C3", "E3", "G3"], // Amin7
-            ["G2", "B2", "D3", "F#3"] // Gmaj7
-        ]
-        this.currentChord = 0
-        this.lastPlayTime = 0
+        this.lastCallTime = 0
     }
 
     update(factor, time) {
-        if (factor > 0.1 && !this.active) {
-            this.active = true
-            // Start playing
-            this.lastPlayTime = time
-            this.padSynth.triggerAttack(this.chords[this.currentChord], time)
-            this.fmSynth.triggerAttackRelease("C5", "1m", time)
-        }
+        const target = THREE.MathUtils.lerp(0, Tone.dbToGain(-24), THREE.MathUtils.clamp(factor, 0, 1))
+        if (Number.isFinite(target)) { try { this.shimmerGain.gain.value = target } catch { /* param may reject during dispose */ } }
 
-        if (this.active) {
-            // Volume logic based on stillness factor (0.0 to 1.0)
-            let targetPadVol = THREE.MathUtils.lerp(-100, -20, factor)
-            let targetFmVol = THREE.MathUtils.lerp(-100, -25, factor)
-
-            if (Number.isFinite(targetPadVol) && !isNaN(targetPadVol) && targetPadVol > -Infinity && targetPadVol < Infinity) {
+        this.active = factor > 0.1
+        if (this.active && time - this.lastCallTime > 6 + Math.random() * 10) {
+            // Distant bird: two or three soft falling notes, pitch free of any scale
+            const base = 1500 + Math.random() * 900
+            const notes = 2 + Math.floor(Math.random() * 2)
+            for (let i = 0; i < notes; i++) {
+                const t = time + i * (0.3 + Math.random() * 0.15)
+                const f = base * (1 - i * 0.12)
                 try {
-                    this.padSynth.volume.value = targetPadVol // Use value assignment instead of ramp to avoid WebAudio param state errors in Three.js loop
-                } catch(e) {}
+                    this.callSynth.triggerAttackRelease(f, "16n", t)
+                    this.callSynth.frequency.exponentialRampTo(f * 0.85, 0.2, t)
+                } catch { /* scheduling may reject during dispose */ }
             }
-            if (Number.isFinite(targetFmVol) && !isNaN(targetFmVol) && targetFmVol > -Infinity && targetFmVol < Infinity) {
-                try {
-                    this.fmSynth.volume.value = targetFmVol
-                } catch(e) {}
-            }
-
-            // Chord progression every 8 seconds
-            if (time - this.lastPlayTime > 8) {
-                this.padSynth.triggerRelease(this.chords[this.currentChord], time)
-                this.currentChord = (this.currentChord + 1) % this.chords.length
-                this.padSynth.triggerAttack(this.chords[this.currentChord], time + 2)
-
-                // Occasional FM shimmer
-                if (Math.random() > 0.5) {
-                    const shimmerNote = ["E5", "G5", "B5"][Math.floor(Math.random() * 3)]
-                    this.fmSynth.triggerAttackRelease(shimmerNote, "2m", time + 1)
-                }
-
-                this.lastPlayTime = time
-            }
-
-            if (factor <= 0.05) {
-                this.active = false
-                this.padSynth.triggerRelease(this.chords[this.currentChord], time)
-                this.padSynth.volume.value = -100
-                this.fmSynth.volume.value = -100
-            }
+            this.lastCallTime = time
         }
     }
 
     dispose() {
-        this.padSynth.dispose(); this.fmSynth.dispose(); this.chorus.dispose()
+        this.shimmer.dispose(); this.shimmerFilter.dispose(); this.shimmerGain.dispose()
+        this.shimmerLfo.dispose(); this.callSynth.dispose()
     }
 }
 
@@ -574,7 +545,10 @@ class HummingbirdLayer {
 export class SoundscapeManager {
   constructor() {
     this.limiter = new Tone.Limiter(-1).toDestination()
-    this.masterEQ = new Tone.EQ3({ high: -6, mid: 0, low: 0, highFrequency: 8000 }).connect(this.limiter)
+    this.masterEQ = new Tone.EQ3({ high: -6, mid: 0, low: 0, highFrequency: 8000 })
+    // Moody, quiet master: keep the whole habitat well under conversation level.
+    this.masterTrim = new Tone.Gain(0.45) // about -7 dB
+    this.masterEQ.connect(this.masterTrim); this.masterTrim.connect(this.limiter)
     this.reverb = new Tone.Reverb({ decay: 4, wet: 0.25 }).connect(this.masterEQ)
     this.reverb.generate()
     this.masterComp = new Tone.Compressor({ threshold: -20, ratio: 2.5, attack: 0.05, release: 0.2 }).connect(this.reverb)
@@ -671,7 +645,7 @@ export class SoundscapeManager {
     this.footsteps.dispose(); this.hummingbirds.dispose(); this.distantThunder.dispose()
     this.zen.dispose()
     this.thunderSynth.dispose(); this.thunderRumble.dispose(); this.splashFX.dispose()
-    this.reverb.dispose(); this.masterComp.dispose(); this.masterEQ.dispose(); this.limiter.dispose()
+    this.reverb.dispose(); this.masterComp.dispose(); this.masterEQ.dispose(); this.masterTrim.dispose(); this.limiter.dispose()
     Tone.Transport.stop()
   }
 }
