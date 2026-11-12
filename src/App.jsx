@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import * as Tone from 'tone'
 import Scene from './components/Scene'
 import { subjects } from './subjects'
-import { Vine, IconSound, IconMotion, IconTheme, IconPin } from './components/Ink'
+import { Vine, IconSound, IconMotion, IconTheme, IconPin, SubjectGlyph } from './components/Ink'
 
 const PIN_KEY = 'amazon-chrome-pin'
 const TOP_ZONE = 96
@@ -27,7 +27,7 @@ export default function App(){
   return()=>{document.removeEventListener('pointermove',onPointerMove);document.removeEventListener('keydown',onKey);clearTimeout(retireTimer.current)};
  },[wake,retireSoon]);
  const togglePin=()=>{setPinned(p=>{const next=!p;try{next?localStorage.setItem(PIN_KEY,'1'):localStorage.removeItem(PIN_KEY)}catch{}if(next)setChrome(true);return next})};
- const onChromeFocus=(e)=>{if(e.target.closest&&e.target.closest('.world-toolbar, .chrome-hint')){focusWithin.current=true;clearTimeout(retireTimer.current);setChrome(true)}};
+ const onChromeFocus=(e)=>{if(e.target.closest&&e.target.closest('.world-toolbar, .subject-trail, .chrome-hint')){focusWithin.current=true;clearTimeout(retireTimer.current);setChrome(true)}};
  const onChromeBlur=(e)=>{if(!rootRef.current?.contains(e.relatedTarget)){focusWithin.current=false;retireSoon()}};
  const chromeOn=chrome||pinned;
  useEffect(()=>{if(entered)wake()},[entered,wake]);
@@ -38,7 +38,7 @@ export default function App(){
    <div className="scene-stage"><Scene subject={selected} reset={reset} audioStarted={sound} paused={paused}/></div>
    {!chromeOn&&<button className="chrome-hint" aria-label="Show controls" onClick={wake}><Vine/></button>}
    <header className={`world-toolbar chrome${chromeOn?' chrome-on':''}`} aria-label="World controls">
-    <label htmlFor="subject">Explore</label><div className="sign-select"><select id="subject" value={subject} onChange={e=>{setSubject(e.target.value);setReset(x=>x+1)}}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+
     <div className="icon-toggles">
      <button id="reset-view" className="ink-toggle" aria-label="Reset view" title="Reset view" onClick={()=>setReset(x=>x+1)}><svg className="ink-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.2 12.2 C 19.1 16.2, 15.9 19.3, 11.9 19.2 C 8 19.1, 5 16, 5.1 12 C 5.2 8.1, 8.4 5, 12.3 5.1 C 14.7 5.2, 16.8 6.3, 18.1 8.1" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/><path d="M18.4 4.4 C 18.5 6, 18.4 7.4, 18.2 8.9 C 16.6 8.5, 15.2 8.2, 13.7 8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg></button>
      <button id="sound-toggle" className="ink-toggle" aria-pressed={sound} aria-label={sound?'Turn sound off':'Turn sound on'} title={sound?'Sound on':'Sound off'} onClick={toggleSound}><IconSound on={sound}/></button>
@@ -47,6 +47,8 @@ export default function App(){
      <button id="pin-controls" className="ink-toggle" aria-pressed={pinned} aria-label={pinned?'Let controls retire':'Keep controls visible'} title={pinned?'Let controls retire':'Keep controls visible'} onClick={togglePin}><IconPin pinned={pinned}/></button>
     </div>
    </header>
+    <nav className={'subject-trail chrome'+(chromeOn?' chrome-on':'')} role="radiogroup" aria-label="Choose a subject">{subjects.map(s=><button key={s.id} type="button" data-subject={s.id} role="radio" aria-checked={subject===s.id} aria-label={s.name} title={s.name} tabIndex={subject===s.id?0:-1} className="trail-token" onClick={()=>{setSubject(s.id);setReset(x=>x+1)}} onKeyDown={e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;e.preventDefault();const i=subjects.findIndex(x=>x.id===subject);const n=subjects[(i+(e.key==='ArrowRight'?1:subjects.length-1))%subjects.length];setSubject(n.id);setReset(x=>x+1)}}><SubjectGlyph id={s.id}/></button>)}</nav>
+
    <section className="subject-note" aria-live="polite"><h1>{selected.title}</h1><p>{selected.note}</p>{selected.source&&<a href={selected.source} target="_blank" rel="noopener noreferrer">Read the WWF species notes</a>}<p className="world-caption">Procedural illustration. Drag to orbit 360°. Pinch or scroll to zoom. <span className="keyboard-tip">Focus the scene and use arrow keys to turn; Home resets.</span></p>{audioError&&<p role="status">{audioError}</p>}</section>
   </>:<section className="start-panel"><div className="start-art" aria-hidden="true"><span/><span/><span/></div><div className="start-copy"><h1>Amazon rainforest</h1><p>A river clearing, a canopy and the animals that give this forest its character.</p><p>Nine views to explore in 360°. Sound is off until you choose it.</p><button id="enter-world" onClick={()=>setEntered(true)}>Explore the forest</button><p className="world-caption">An illustrated habitat, not a live camera or a mapped place.</p></div></section>}
  </main>

@@ -7,7 +7,7 @@ import CameraController from './CameraController'
 import AudioController from './Audio/AudioController'
 import { JaguarStudy, DolphinStudy, SlothStudy, MacawStudy, FrogStudy, HummingbirdStudy, ButterflyStudy } from './AnimalStudies'
 
-function RenderCadence({active,subject}){const {invalidate,gl}=useThree();useEffect(()=>{gl.shadowMap.autoUpdate=false;gl.shadowMap.needsUpdate=true;invalidate()},[subject,gl,invalidate]);useEffect(()=>{if(!active)return;const t=setInterval(invalidate,80);return()=>clearInterval(t)},[active,invalidate]);return null}
+function RenderCadence({active,subject}){const {invalidate,gl}=useThree();useEffect(()=>{gl.shadowMap.autoUpdate=false;gl.shadowMap.needsUpdate=true;invalidate()},[subject,gl,invalidate]);useEffect(()=>{if(!active)return;const t=setInterval(invalidate,40);return()=>clearInterval(t)},[active,invalidate]);return null}
 function Water({river}){
  const mat=useRef(),motion=useMotion();useFrame(({clock})=>{if(mat.current&&motion)mat.current.uniforms.time.value=clock.elapsedTime});
  const uniforms=useMemo(()=>({time:{value:0}}),[]);

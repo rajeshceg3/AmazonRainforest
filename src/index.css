@@ -31,3 +31,15 @@ canvas:focus-visible{outline:3px solid #f1d69a;outline-offset:-4px}.webgl-error{
 .start-copy button:active{transform:translate(2px,3px);box-shadow:1px 1px 0 rgba(6,20,14,.45)}
 @media(max-width:700px){.chrome-hint{right:14px}.world-toolbar label{display:none}}
 @media(prefers-reduced-motion:reduce){.chrome-hint{animation:none}.chrome,.chrome.chrome-on{transition:none}}
+
+/* --- river-trail subject strip: carved tokens on a dotted path --- */
+.subject-trail{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:9px 14px;background:var(--surface);border:2px solid var(--ink-line);border-radius:18px 16px 19px 15px/15px 19px 16px 18px;box-shadow:3px 4px 0 var(--shadow);max-width:calc(100% - 20px);overflow-x:auto;scroll-snap-type:x proximity;z-index:10;scrollbar-width:none}
+.subject-trail::-webkit-scrollbar{display:none}
+.subject-trail::before{content:"";position:absolute;left:16px;right:16px;top:50%;border-top:2px dashed var(--ink-line);opacity:.45}
+.trail-token{position:relative;flex:none;width:44px;min-height:44px;height:44px;padding:6px;scroll-snap-align:center;border:2px solid transparent;border-radius:12px 14px 11px 13px/13px 12px 14px 11px;background:var(--surface);color:var(--text);cursor:pointer;transition:transform .15s cubic-bezier(.23,1,.32,1),background .15s ease,border-color .15s ease}
+.trail-token[aria-checked="true"]{background:var(--link);color:var(--surface);border-color:var(--link);transform:translateY(-4px)}
+.trail-token:active{transform:translate(1px,2px)}
+.trail-token .ink-icon{width:100%;height:100%}
+.subject-note{bottom:86px}
+@media(max-width:700px){.subject-note{bottom:80px}.subject-trail{left:10px;right:10px;transform:none;justify-content:flex-start}}
+@media(prefers-reduced-motion:reduce){.trail-token{transition:none}}
